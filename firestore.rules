@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== DEVELOPMENT MODE =====
+    // For production, replace with more restrictive rules
+    // Allow all authenticated users to read/write all collections
+    
+    // ===== EMPLOYERS =====
+    match /employers/{employerId} {
+      allow create: if true;
+      allow read, update, delete: if true;
+    }
+
+    // ===== PROFESSIONALS =====
+    match /professionals/{professionalId} {
+      allow create: if true;
+      allow read, update, delete: if true;
+    }
+
+    // ===== STINTS =====
+    match /stints/{stintId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // ===== APPLICATIONS =====
+    match /applications/{applicationId} {
+      allow read, write: if true;
+    }
+
+    // ===== STINT APPLICATIONS =====
+    match /stintApplications/{applicationId} {
+      allow read, write: if true;
+    }
+
+    // ===== DISPUTES =====
+    match /disputes/{disputeId} {
+      allow read, write: if true;
+    }
+
+    // ===== PAYOUTS =====
+    match /payouts/{payoutId} {
+      allow read, write: if true;
+    }
+
+    // ===== INVOICES =====
+    match /invoices/{invoiceId} {
+      allow read, write: if true;
+    }
+
+    // ===== AUDIT LOGS =====
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // ===== AUDIT LOGS (camelCase - used by code) =====
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+
+    // ===== NOTIFICATIONS =====
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // ===== RISK SCORES =====
+    match /risk_scores/{scoreId} {
+      allow read, write: if true;
+    }
+
+    // ===== MARKETPLACE INSIGHTS =====
+    match /marketplace_insights/{insightId} {
+      allow read, write: if true;
+    }
+  }
+}
+

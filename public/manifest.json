@@ -1,0 +1,71 @@
+{
+    "name": "CareStint",
+    "short_name": "CareStint",
+    "description": "Healthcare staffing platform connecting clinics with verified medical professionals",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0B1426",
+    "theme_color": "#0B1426",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "medical",
+        "healthcare",
+        "business",
+        "productivity"
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot-wide.png",
+            "sizes": "1920x1080",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "/screenshot-mobile.png",
+            "sizes": "750x1334",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Find Stints",
+            "short_name": "Find",
+            "description": "Browse available healthcare shifts",
+            "url": "/dashboard/professional?tab=find-stints",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Post Stint",
+            "short_name": "Post",
+            "description": "Post a new healthcare shift",
+            "url": "/dashboard/employer?tab=overview",
+            "icons": [
+                {
+                    "src": "/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
+    "prefer_related_applications": false
+}
