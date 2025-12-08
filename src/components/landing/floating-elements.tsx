@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { Heart, Activity, Stethoscope, Plus } from 'lucide-react';
+import { Activity, Stethoscope, Plus } from 'lucide-react';
 
 export function FloatingElements() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -67,9 +67,6 @@ export function FloatingElements() {
 
     return (
         <div ref={containerRef} className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
-            <div className="float-element absolute left-[15%] top-[15%]">
-                <Heart className="h-12 w-12 text-accent" />
-            </div>
             <div className="float-element absolute right-[20%] top-[25%]">
                 <Activity className="h-16 w-16 text-primary" />
             </div>
@@ -79,8 +76,8 @@ export function FloatingElements() {
             <div className="float-element absolute right-[15%] bottom-[25%]">
                 <Plus className="h-20 w-20 text-primary" strokeWidth={1.5} />
             </div>
-            <div className="float-element absolute left-[40%] top-[40%]">
-                <Heart className="h-10 w-10 text-accent/50" />
+            <div className="float-element absolute left-[15%] top-[15%]">
+                <Activity className="h-12 w-12 text-accent" />
             </div>
         </div>
     );

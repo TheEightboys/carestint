@@ -18,7 +18,7 @@ const faqs = [
   {
     icon: <DollarSign className="h-5 w-5 text-accent" />,
     question: "How do the 15%, 20% and 5% fees work?",
-    answer: `Clinics only pay a booking fee once a professional accepts a stint.
+    answer: `Employers/Facilities only pay a booking fee once a professional accepts a stint.
 
 • **Normal notice (24h+):** 15% of the offered rate
 • **Urgent shifts (<12–24h):** 20% of the offered rate
@@ -42,9 +42,9 @@ The SuperAdmin validates professional documents, and the system **automatically 
     question: "Do I have to pay a monthly subscription?",
     answer: `**No.** CareStint operates on a pay-as-you-book model.
 
-Clinics only pay when a shift is successfully confirmed.
+Employers/Facilities only pay when a shift is successfully confirmed.
 
-Subscription tiers may be added later for high-volume clinics (e.g., discounted booking fees or extra features).`,
+Subscription tiers may be added later for high-volume employers (e.g., discounted booking fees or extra features).`,
   },
   {
     icon: <Calendar className="h-5 w-5 text-accent" />,
@@ -60,8 +60,8 @@ Funds are sent to their preferred payout method (M-Pesa or bank).`,
   },
   {
     icon: <AlertCircle className="h-5 w-5 text-accent" />,
-    question: "What happens if a clinic cancels a stint?",
-    answer: `If a clinic cancels **less than 12 hours** before the shift, a cancellation fee applies:
+    question: "What happens if an Employer/Facility cancels a stint?",
+    answer: `If an Employer/Facility cancels **less than 12 hours** before the shift, a cancellation fee applies:
 
 **KSh 1,000 or 20% of the offered rate** (whichever is higher).
 
@@ -76,7 +76,7 @@ These rules can be adjusted per market, but the app treats them as configurable 
 • 🇺🇬 Uganda
 • 🇹🇿 Tanzania
 
-New regions can be added gradually as we onboard more clinics and professionals.`,
+New regions can be added gradually as we onboard more Employers/Facilities and professionals.`,
   },
 ];
 

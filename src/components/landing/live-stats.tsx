@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Users, Building, Briefcase, DollarSign, TrendingUp, Shield } from 'lucide-react';
+import { Users, Building, Briefcase, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -81,43 +81,24 @@ export function LiveStats() {
     const stats = [
         {
             icon: Users,
-            value: 523,
+            value: 700,
             label: "Verified Professionals",
+            suffix: "+",
             color: "from-blue-500 to-blue-600"
         },
         {
             icon: Building,
-            value: 127,
+            value: 100,
             label: "Partner Facilities",
+            suffix: "+",
             color: "from-purple-500 to-purple-600"
         },
         {
             icon: Briefcase,
-            value: 12847,
+            value: 4500,
             label: "Stints Completed",
+            suffix: "+",
             color: "from-green-500 to-green-600"
-        },
-        {
-            icon: DollarSign,
-            value: 45,
-            label: "Million KES Processed",
-            prefix: "",
-            suffix: "M+",
-            color: "from-orange-500 to-orange-600"
-        },
-        {
-            icon: TrendingUp,
-            value: 98,
-            label: "Fill Rate",
-            suffix: "%",
-            color: "from-teal-500 to-teal-600"
-        },
-        {
-            icon: Shield,
-            value: 100,
-            label: "License Verified",
-            suffix: "%",
-            color: "from-red-500 to-red-600"
         }
     ];
 
@@ -133,7 +114,7 @@ export function LiveStats() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                     {stats.map((stat, index) => (
                         <StatCard
                             key={stat.label}

@@ -101,7 +101,7 @@ export function Header() {
                     </div>
                     <div>
                       <div className="font-medium">Sign in as Employer</div>
-                      <div className="text-xs text-muted-foreground">For clinics & facilities</div>
+                      <div className="text-xs text-muted-foreground">For Employers/Facilities</div>
                     </div>
                   </Button>
                   <Button
@@ -119,7 +119,7 @@ export function Header() {
                   <div className="h-px bg-border my-2" />
                   <div className="px-2 py-4">
                     <p className="text-xs text-muted-foreground">
-                      CareStint connects healthcare professionals with clinics across East & Central Africa.
+                      CareStint connects healthcare professionals with Employers/Facilities across East & Central Africa.
                     </p>
                   </div>
                 </div>

@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 const testimonials = [
     {
         id: 1,
-        name: "Dr. Sarah Wanjiku",
+        name: "Dr. Sarah W.",
         role: "Medical Director",
-        facility: "Nairobi Premier Clinic",
+        facility: "A Clinic in Nairobi",
         avatar: "SW",
         rating: 5,
         text: "CareStint has transformed how we handle staffing shortages. We can now fill urgent shifts within hours instead of days. The quality of professionals on the platform is exceptional.",
@@ -18,19 +18,19 @@ const testimonials = [
     },
     {
         id: 2,
-        name: "James Ochieng",
+        name: "James O.",
         role: "Registered Nurse",
         facility: "Freelance Professional",
         avatar: "JO",
         rating: 5,
-        text: "As a nurse looking for flexible work, CareStint is perfect. I choose when and where I work, and the automated payments via M-Pesa are always on time. Highly recommended!",
+        text: "As a nurse looking for flexible work, CareStint is perfect. I choose when and where I work, and the automated payments are always on time. Highly recommended!",
         type: "professional"
     },
     {
         id: 3,
-        name: "Dr. Michael Kiprop",
+        name: "Dr. Michael K.",
         role: "Hospital Administrator",
-        facility: "Eldoret Medical Center",
+        facility: "A Hospital in Eldoret",
         avatar: "MK",
         rating: 5,
         text: "The verification process gives us confidence that every professional we hire is fully licensed and qualified. The risk scoring feature is incredibly helpful.",
@@ -38,7 +38,7 @@ const testimonials = [
     },
     {
         id: 4,
-        name: "Grace Muthoni",
+        name: "Grace M.",
         role: "Clinical Officer",
         facility: "Freelance Professional",
         avatar: "GM",
@@ -48,12 +48,12 @@ const testimonials = [
     },
     {
         id: 5,
-        name: "Daniel Kimani",
+        name: "Daniel K.",
         role: "Operations Manager",
-        facility: "Mombasa General Hospital",
+        facility: "A Nursing Home in Kiambu",
         avatar: "DK",
         rating: 5,
-        text: "The automated KYC verification and dispute resolution features save us hours of administrative work. It's the most efficient staffing solution we've used.",
+        text: "The automated verification and dispute resolution features save us hours of administrative work. It's the most efficient staffing solution we've used.",
         type: "employer"
     }
 ];
@@ -105,13 +105,13 @@ export function Testimonials() {
                         <span className="text-sm font-medium">4.9/5 Average Rating</span>
                     </div>
                     <div className="bg-card/50 backdrop-blur rounded-full px-4 py-2 border">
-                        <span className="text-sm font-medium">500+ Verified Professionals</span>
+                        <span className="text-sm font-medium">700+ Verified Professionals</span>
                     </div>
                     <div className="bg-card/50 backdrop-blur rounded-full px-4 py-2 border">
                         <span className="text-sm font-medium">100+ Partner Facilities</span>
                     </div>
                     <div className="bg-card/50 backdrop-blur rounded-full px-4 py-2 border">
-                        <span className="text-sm font-medium">10,000+ Stints Completed</span>
+                        <span className="text-sm font-medium">4,500+ Stints Completed</span>
                     </div>
                 </div>
 

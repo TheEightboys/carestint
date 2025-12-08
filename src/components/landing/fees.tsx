@@ -1,55 +1,40 @@
-
 "use client";
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { CheckCircle2, Calculator, ArrowRight, Info } from 'lucide-react';
+import { CheckCircle2, Calculator, Info, Building, UserCheck, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getFeeBreakdown, formatCurrency } from '@/lib/fee-calculator';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const feeTiers = [
-    {
-        title: "Normal Notice",
-        rate: "15%",
-        description: "For shifts booked with 24h+ notice. Charged to the clinic on confirmation.",
-        audience: "Booking Fee",
-        highlight: false,
-        icon: "📅",
-    },
-    {
-        title: "Urgent Notice",
-        rate: "20%",
-        description: "For urgent shifts booked with less than 24h notice.",
-        audience: "Booking Fee",
-        highlight: true,
-        icon: "⚡",
-    },
-    {
-        title: "Professional Service Fee",
-        rate: "5%",
-        description: "Platform fee deducted from the professional's final payout.",
-        audience: "Service Fee",
-        highlight: false,
-        icon: "💼",
-    },
-];
 
 export function Fees() {
     const sectionRef = useRef<HTMLDivElement>(null);
     const [offeredRate, setOfferedRate] = useState(5000);
     const [isUrgent, setIsUrgent] = useState(false);
+    const [currency, setCurrency] = useState<'KSh' | 'UGX' | 'TZS'>('KSh');
 
     const breakdown = getFeeBreakdown(offeredRate, isUrgent ? 'urgent' : 'normal');
 
+    // Currency conversion rates (approximate)
+    const currencyRates: Record<string, number> = {
+        'KSh': 1,
+        'UGX': 28.5,  // 1 KSh ≈ 28.5 UGX
+        'TZS': 18.5   // 1 KSh ≈ 18.5 TZS
+    };
+
+    const formatWithCurrency = (amount: number) => {
+        const converted = Math.round(amount * currencyRates[currency]);
+        return `${currency} ${converted.toLocaleString()}`;
+    };
+
     useLayoutEffect(() => {
         const ctx = gsap.context(() => {
-            // Header animation
             gsap.fromTo(".fees-header",
                 { opacity: 0, y: 50, filter: "blur(10px)" },
                 {
@@ -66,26 +51,23 @@ export function Fees() {
                 }
             );
 
-            // Cards with 3D effect
-            gsap.fromTo(".fee-card",
-                { opacity: 0, y: 60, rotateX: 10, scale: 0.9 },
+            gsap.fromTo(".fee-column",
+                { opacity: 0, y: 60, scale: 0.95 },
                 {
                     opacity: 1,
                     y: 0,
-                    rotateX: 0,
                     scale: 1,
                     duration: 1,
                     ease: "back.out(1.2)",
-                    stagger: 0.15,
+                    stagger: 0.2,
                     scrollTrigger: {
-                        trigger: ".fee-card-container",
+                        trigger: ".fee-columns",
                         start: "top 80%",
                         toggleActions: "play none none none"
                     }
                 }
             );
 
-            // Calculator animation
             gsap.fromTo(".fee-calculator",
                 { opacity: 0, x: -50 },
                 {
@@ -126,47 +108,129 @@ export function Fees() {
                     </p>
                 </div>
 
-                {/* Fee cards */}
-                <div className="fee-card-container grid grid-cols-1 gap-6 md:grid-cols-3 mb-16">
-                    {feeTiers.map((tier, index) => (
-                        <Card
-                            key={tier.title}
-                            className={`fee-card group relative flex flex-col glass-card border-accent/20 hover:border-accent/40 transition-all duration-500 hover:-translate-y-2 hover:scale-105 overflow-hidden ${tier.highlight ? 'ring-2 ring-accent/50 md:scale-105' : ''
-                                }`}
-                        >
-                            {/* Glow effect on hover */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-accent/0 to-accent/0 group-hover:from-accent/10 group-hover:to-primary/10 transition-all duration-500" />
-
-                            {tier.highlight && (
-                                <div className="absolute top-0 left-0 right-0 bg-accent/90 text-accent-foreground text-center py-1 text-xs font-semibold">
-                                    Most Common
+                {/* Two Column Fee Structure */}
+                <div className="fee-columns grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+                    {/* For Employers Column */}
+                    <Card className="fee-column glass-card border-primary/20 overflow-hidden">
+                        <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-6">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
+                                    <Building className="h-6 w-6 text-primary" />
                                 </div>
-                            )}
-
-                            <CardHeader className={`relative z-10 ${tier.highlight ? 'pt-8' : ''}`}>
-                                <div className="text-3xl mb-2">{tier.icon}</div>
-                                <p className="text-sm font-semibold text-accent uppercase tracking-wider">{tier.audience}</p>
-                                <CardTitle className="font-headline text-2xl mt-2">{tier.title}</CardTitle>
-                            </CardHeader>
-
-                            <CardContent className="relative z-10 flex flex-1 flex-col justify-between">
                                 <div>
-                                    <div className="mb-6">
-                                        <span className="text-6xl font-bold font-headline gradient-text block">{tier.rate}</span>
-                                        <span className="text-sm text-muted-foreground">of offered rate</span>
-                                    </div>
-                                    <p className="text-muted-foreground leading-relaxed">
-                                        {tier.description}
-                                    </p>
+                                    <CardTitle className="font-headline text-2xl">For Employers</CardTitle>
+                                    <CardDescription>Booking fees charged on confirmation</CardDescription>
                                 </div>
-                            </CardContent>
-
-                            {/* Shimmer effect */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             </div>
-                        </Card>
-                    ))}
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-6">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                                    <div className="text-3xl">📅</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-baseline justify-between">
+                                            <h4 className="font-semibold">Normal Notice</h4>
+                                            <span className="text-2xl font-bold gradient-text">15%</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">For shifts booked with 24h+ notice</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                    <div className="text-3xl">⚡</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-baseline justify-between">
+                                            <h4 className="font-semibold">Urgent Notice</h4>
+                                            <span className="text-2xl font-bold text-yellow-500">20%</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">For shifts with less than 24h notice</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                                    <div className="text-3xl">🚫</div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold">Cancellation</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            &lt;12h notice: KSh 1,000 or 20% (whichever is higher)
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                                    <div className="text-3xl">🤝</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-baseline justify-between">
+                                            <h4 className="font-semibold">Permanent Hire</h4>
+                                            <span className="text-2xl font-bold gradient-text">35%</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">Of first month's salary (success fee)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* For Professionals Column */}
+                    <Card className="fee-column glass-card border-accent/20 overflow-hidden">
+                        <CardHeader className="bg-gradient-to-r from-accent/10 to-transparent pb-6">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/20">
+                                    <UserCheck className="h-6 w-6 text-accent" />
+                                </div>
+                                <div>
+                                    <CardTitle className="font-headline text-2xl">For Professionals</CardTitle>
+                                    <CardDescription>Fees deducted from your payout</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-6">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                                    <div className="text-3xl">💼</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-baseline justify-between">
+                                            <h4 className="font-semibold">Platform Fee</h4>
+                                            <span className="text-2xl font-bold gradient-text">5%</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">Deducted from your final payout amount</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                                    <div className="flex h-10 w-10 items-center justify-center">
+                                        <Clock className="h-6 w-6 text-green-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-green-500">Payout Timeline</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            Receive payment within 24 hours after the dispute window closes
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
+                                    <div className="text-3xl">💳</div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold">Mobile/Bank Transfer Fee</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            Standard M-Pesa, Airtel Money, or bank transfer fees apply
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 rounded-lg bg-accent/5 border border-accent/20">
+                                    <div className="text-3xl">✨</div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold">No Subscription</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            Free to join and browse stints. You only pay when you earn.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Interactive fee calculator */}
@@ -185,14 +249,27 @@ export function Fees() {
                         </CardHeader>
                         <CardContent className="p-6 space-y-6">
                             {/* Input controls */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="rate" className="text-sm font-medium">Offered Rate (KSh)</Label>
+                                    <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
+                                    <Select value={currency} onValueChange={(v) => setCurrency(v as 'KSh' | 'UGX' | 'TZS')}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="KSh">🇰🇪 KSh (Kenya)</SelectItem>
+                                            <SelectItem value="UGX">🇺🇬 UGX (Uganda)</SelectItem>
+                                            <SelectItem value="TZS">🇹🇿 TZS (Tanzania)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="rate" className="text-sm font-medium">Offered Rate ({currency})</Label>
                                     <Input
                                         id="rate"
                                         type="number"
-                                        value={offeredRate}
-                                        onChange={(e) => setOfferedRate(Number(e.target.value) || 0)}
+                                        value={Math.round(offeredRate * currencyRates[currency])}
+                                        onChange={(e) => setOfferedRate(Math.round((Number(e.target.value) || 0) / currencyRates[currency]))}
                                         className="text-lg font-semibold"
                                         min={0}
                                     />
@@ -205,7 +282,7 @@ export function Fees() {
                                             onCheckedChange={setIsUrgent}
                                         />
                                         <span className={`text-sm font-medium ${isUrgent ? 'text-yellow-500' : 'text-foreground'}`}>
-                                            {isUrgent ? '⚡ Urgent (<24h)' : '📅 Normal (24h+)'}
+                                            {isUrgent ? '⚡ Urgent' : '📅 Normal'}
                                         </span>
                                     </div>
                                 </div>
@@ -213,24 +290,24 @@ export function Fees() {
 
                             {/* Results */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
-                                {/* Clinic side */}
+                                {/* Employer side */}
                                 <div className="space-y-3 rounded-lg bg-secondary/50 p-4">
                                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                                         <span className="h-2 w-2 rounded-full bg-blue-400"></span>
-                                        Clinic Pays
+                                        Employer Pays
                                     </h4>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Offered Rate</span>
-                                            <span>{formatCurrency(breakdown.clinicOfferedRate)}</span>
+                                            <span>{formatWithCurrency(breakdown.clinicOfferedRate)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Booking Fee ({breakdown.clinicBookingFee.percent}%)</span>
-                                            <span className="text-accent">+ {formatCurrency(breakdown.clinicBookingFee.amount)}</span>
+                                            <span className="text-accent">+ {formatWithCurrency(breakdown.clinicBookingFee.amount)}</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                             <span>Total</span>
-                                            <span className="gradient-text">{formatCurrency(breakdown.clinicTotalCost)}</span>
+                                            <span className="gradient-text">{formatWithCurrency(breakdown.clinicTotalCost)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -244,19 +321,19 @@ export function Fees() {
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Offered Rate</span>
-                                            <span>{formatCurrency(breakdown.proGrossAmount)}</span>
+                                            <span>{formatWithCurrency(breakdown.proGrossAmount)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Platform Fee (5%)</span>
-                                            <span className="text-red-400">- {formatCurrency(breakdown.proPlatformFee.amount)}</span>
+                                            <span className="text-red-400">- {formatWithCurrency(breakdown.proPlatformFee.amount)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">M-Pesa Cost</span>
-                                            <span className="text-red-400">- {formatCurrency(breakdown.proMpesaCost)}</span>
+                                            <span className="text-muted-foreground">Mobile/Bank Transfer Fee</span>
+                                            <span className="text-red-400">- {formatWithCurrency(breakdown.proMpesaCost)}</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg pt-2 border-t">
                                             <span>Net Payout</span>
-                                            <span className="text-green-400">{formatCurrency(breakdown.proNetPayout)}</span>
+                                            <span className="text-green-400">{formatWithCurrency(breakdown.proNetPayout)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -266,7 +343,7 @@ export function Fees() {
                             <div className="flex items-start gap-2 rounded-lg bg-accent/5 p-3 text-xs text-muted-foreground">
                                 <Info className="h-4 w-4 text-accent shrink-0 mt-0.5" />
                                 <span>
-                                    Platform revenue from this stint: <span className="font-semibold text-accent">{formatCurrency(breakdown.platformRevenue)}</span> (booking fee + platform fee)
+                                    Platform revenue from this stint: <span className="font-semibold text-accent">{formatWithCurrency(breakdown.platformRevenue)}</span> (booking fee + platform fee)
                                 </span>
                             </div>
                         </CardContent>

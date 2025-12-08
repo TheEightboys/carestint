@@ -73,7 +73,7 @@ export function Terms() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
                 <FileText className="h-4 w-4 text-blue-400" />
               </div>
-              <span className="font-semibold">Clinics & Employers</span>
+              <span className="font-semibold">Employers/Facilities</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="pl-12 pb-5">
@@ -89,7 +89,7 @@ export function Terms() {
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Cancellation</p>
-                  <p>Clinic cancellation &lt;12h: KSh 1,000 or 20% (whichever is higher).</p>
+                  <p>Employer/Facility cancellation &lt;12h: KSh 1,000 or 20% (whichever is higher).</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Permanent Hire</p>
@@ -152,11 +152,11 @@ export function Terms() {
           </AccordionTrigger>
           <AccordionContent className="pl-12 pb-5">
             <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
-              <p>CareStint is a platform that connects healthcare professionals with clinics and facilities. <strong className="text-foreground">CareStint is not the employer of record</strong> for either party. All hiring decisions and contracts are made directly between clinics and professionals.</p>
+              <p>CareStint is a platform that connects healthcare professionals with Employers/Facilities. <strong className="text-foreground">CareStint is not the employer of record</strong> for either party. All hiring decisions and contracts are made directly between Employers/Facilities and professionals.</p>
 
-              <p>By using the platform, clinics agree that they are responsible for complying with <strong className="text-foreground">local labour, tax and professional regulations</strong>, including any onboarding and supervision required for temporary staff.</p>
+              <p>By using the platform, Employers/Facilities agree that they are responsible for complying with <strong className="text-foreground">local labour, tax and professional regulations</strong>, including any onboarding and supervision required for temporary staff.</p>
 
-              <p>Payments are processed on behalf of clinics and released to professionals after shift completion, minus platform and payout fees. In a live deployment, detailed statements would be available for both sides before a stint is confirmed.</p>
+              <p>Payments are processed on behalf of Employers/Facilities and released to professionals after shift completion, minus platform and payout fees. In a live deployment, detailed statements would be available for both sides before a stint is confirmed.</p>
 
               <p>CareStint is intended to support <strong className="text-foreground">short-term staffing only</strong> and does not guarantee availability of professionals or stints. Either side may cancel in line with the applicable cancellation policy once defined in the production system.</p>
 

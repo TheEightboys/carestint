@@ -35,8 +35,10 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
   const { toast } = useToast();
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
 
-  // Email auth states
+  // Auth states
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
@@ -86,13 +88,16 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
     }
   };
 
-  // Email/Password Sign In
+  // Email/Password Sign In (with Username or Email)
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Determine if input is email or username
+    const loginEmail = emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@carestint.generated.email`;
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, loginEmail, password);
 
       toast({
         title: 'Welcome back!',
@@ -156,7 +161,9 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
     onOpenChange(open);
     if (!open) {
       setTimeout(() => {
+        setEmailOrUsername('');
         setEmail('');
+        setUsername('');
         setPassword('');
         setFullName('');
         setAuthMode('signin');
@@ -176,7 +183,7 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
             {authMode === 'signin' ? 'Sign in' : 'Sign up'} as {userTypeName}
           </DialogTitle>
           <DialogDescription>
-            {authMode === 'signin' ? 'Enter your email and password to continue.' : 'Create a new account to get started.'}
+            {authMode === 'signin' ? 'Enter your username or email and password to continue.' : 'Create a new account to get started.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -184,16 +191,16 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
           {authMode === 'signin' ? (
             <form onSubmit={handleEmailSignIn} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
+                <Label htmlFor="emailOrUsername" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Username or Email
                 </Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="emailOrUsername"
+                  type="text"
+                  placeholder="username or you@example.com"
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
                   required
                 />
               </div>
@@ -240,6 +247,20 @@ export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
                   placeholder="John Doe"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="johndoe123"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>

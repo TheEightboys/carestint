@@ -14,18 +14,18 @@ const features = [
     icon: <Zap className="h-8 w-8 text-accent" />,
     title: 'Fast',
     description: 'Post shifts and find qualified professionals in minutes, not days. Respond to urgent needs instantly.',
-    highlights: ['Instant matching', '< 3h average fill time'],
+    highlights: ['Instant matching', '< 4h average fill time'],
   },
   {
     icon: <Target className="h-8 w-8 text-accent" />,
     title: 'Focused',
-    description: 'A dedicated platform for healthcare staffing in Africa, built with local needs in mind.',
+    description: 'A dedicated platform for healthcare staffing, built with local needs in mind.',
     highlights: ['East & Central Africa', 'Local currency support'],
   },
   {
     icon: <Rocket className="h-8 w-8 text-accent" />,
     title: 'Automated',
-    description: 'From KYC and license verification to payouts and receipts, we automate the admin work.',
+    description: 'From license checks and ID verification to payouts and receipts, we automate the admin work.',
     highlights: ['Auto-verification', 'Smart payout scheduling'],
   },
   {
@@ -141,11 +141,11 @@ export function Features() {
               <span>iOS & Android apps coming soon</span>
             </div>
             <h2 className="features-title font-headline text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
-              Why clinics and professionals{' '}
+              Why Employers/Facilities and professionals{' '}
               <span className="gradient-text">choose CareStint</span>
             </h2>
             <p className="features-title text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Built for the unique challenges of healthcare staffing in Africa, with all the automation you need.
+              Built for the unique challenges of healthcare staffing, with all the automation you need.
             </p>
           </div>
 
@@ -201,10 +201,10 @@ export function Features() {
           {/* Bottom stats bar */}
           <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4 max-w-4xl mx-auto">
             {[
-              { icon: <Globe className="h-5 w-5" />, label: '3 Countries', sublabel: 'Kenya, Uganda, Tanzania' },
+              { icon: <Globe className="h-5 w-5" />, label: 'Now serving', sublabel: '3 Countries' },
               { icon: <Clock className="h-5 w-5" />, label: '24/7', sublabel: 'Platform availability' },
               { icon: <ShieldCheck className="h-5 w-5" />, label: '100%', sublabel: 'Verified pros' },
-              { icon: <Zap className="h-5 w-5" />, label: '< 3 hrs', sublabel: 'Avg. fill time' },
+              { icon: <Zap className="h-5 w-5" />, label: '< 4 hrs', sublabel: 'Avg. fill time' },
             ].map((stat, i) => (
               <div key={i} className="feature-card flex flex-col items-center justify-center rounded-xl bg-secondary/50 backdrop-blur-sm p-4 text-center border border-border/50 hover:border-accent/30 transition-colors">
                 <div className="text-accent mb-2">{stat.icon}</div>

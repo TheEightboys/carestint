@@ -8,12 +8,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { HowItWorksModalContent } from './how-it-works-modal';
 import { AnimatedBackground } from './animated-background';
 import { FloatingElements } from './floating-elements';
-import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Heart, Users, Shield } from 'lucide-react';
+import { AuthModal } from '@/components/auth/auth-modal';
+import type { UserType } from '@/components/auth/auth-modal';
+import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, Shield, ArrowRight, Building } from 'lucide-react';
 import { gsap } from "gsap";
 
 export function Hero() {
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authUserType, setAuthUserType] = useState<UserType>('professional');
   const heroRef = useRef<HTMLDivElement>(null);
+
+  const handleAuthClick = (type: UserType) => {
+    setAuthUserType(type);
+    setAuthModalOpen(true);
+  };
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -103,23 +112,44 @@ export function Hero() {
                   <span className="hero-headline block text-accent">Anytime, anywhere.</span>
                 </h1>
                 <p className="hero-subline max-w-[600px] text-lg text-muted-foreground md:text-xl leading-relaxed">
-                  The leading platform connecting clinics and healthcare professionals for flexible staffing across <span className="text-foreground font-medium">East & Central Africa</span>.
+                  The leading platform connecting Employers/Facilities and healthcare professionals for flexible staffing across <span className="text-foreground font-medium">East & Central Africa</span>.
                 </p>
               </div>
 
-              {/* Trust badges */}
-              <div className="flex flex-wrap gap-4">
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-accent/10 px-4 py-2 text-sm font-medium text-accent border border-accent/20">
-                  <Shield className="h-4 w-4" />
-                  <span>Verified Professionals</span>
+              {/* Hero CTAs */}
+              <div className="hero-subline flex flex-wrap gap-4">
+                <Button
+                  size="lg"
+                  onClick={() => handleAuthClick('professional')}
+                  className="bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent/30 text-lg px-8 py-6"
+                >
+                  Create Account
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handleAuthClick('employer')}
+                  className="transition-all duration-300 hover:scale-105 hover:border-accent text-lg px-8 py-6"
+                >
+                  <Building className="mr-2 h-5 w-5" />
+                  Sign In
+                </Button>
+              </div>
+
+              {/* Trust badges - tightened layout */}
+              <div className="flex flex-wrap gap-3">
+                <div className="trust-badge flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent border border-accent/20">
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>License-verified professionals</span>
                 </div>
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary-foreground border border-primary/20">
-                  <Sparkles className="h-4 w-4" />
-                  <span>Pay-as-you-book</span>
+                <div className="trust-badge flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary-foreground border border-primary/20">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Compliant, secure payment</span>
                 </div>
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground border border-border">
-                  <Heart className="h-4 w-4 text-red-400" />
-                  <span>Trusted by 300+ clinics</span>
+                <div className="trust-badge flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground border border-border">
+                  <Building className="h-3.5 w-3.5" />
+                  <span>Trusted by 300+ Employers/Facilities</span>
                 </div>
               </div>
 
@@ -256,6 +286,12 @@ export function Hero() {
           <HowItWorksModalContent />
         </DialogContent>
       </Dialog>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        userType={authUserType}
+      />
     </>
   );
 }

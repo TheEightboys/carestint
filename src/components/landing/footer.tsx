@@ -1,3 +1,5 @@
+"use client";
+
 import Link from 'next/link';
 import { Logo } from '@/components/icons/logo';
 import { Heart, Mail, Phone, MapPin, Twitter, Linkedin, Facebook } from 'lucide-react';
@@ -5,20 +7,36 @@ import { Heart, Mail, Phone, MapPin, Twitter, Linkedin, Facebook } from 'lucide-
 export function Footer() {
     const currentYear = new Date().getFullYear();
 
+    const scrollToHowItWorks = (tab: 'employer' | 'professional') => {
+        const element = document.getElementById('how-it-works');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+            // After scrolling, trigger a click on the appropriate tab
+            setTimeout(() => {
+                const button = document.querySelector(
+                    tab === 'employer'
+                        ? 'button:has(.lucide-building)'
+                        : 'button:has(.lucide-user-check)'
+                ) as HTMLButtonElement;
+                if (button) button.click();
+            }, 500);
+        }
+    };
+
     return (
         <footer className="relative border-t bg-gradient-to-b from-background to-secondary/30">
             {/* Decorative top border */}
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
 
             <div className="container mx-auto px-4 py-12">
-                <div className="grid gap-8 md:grid-cols-4">
+                <div className="grid gap-8 md:grid-cols-3">
                     {/* Brand */}
-                    <div className="md:col-span-2 space-y-4">
+                    <div className="space-y-4">
                         <Link href="/" className="inline-flex items-center space-x-2">
                             <Logo className="h-6 w-auto" />
                         </Link>
                         <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-                            Smart, automated healthcare staffing for East & Central Africa. Connecting clinics with verified professionals.
+                            Smart, automated healthcare staffing for East & Central Africa. Connecting Employers/Facilities with verified professionals.
                         </p>
                         <div className="flex items-center gap-4 pt-2">
                             <a href="#" className="text-muted-foreground hover:text-accent transition-colors">
@@ -38,16 +56,20 @@ export function Footer() {
                         <h4 className="font-headline font-semibold text-foreground">Platform</h4>
                         <ul className="space-y-2 text-sm">
                             <li>
-                                <a href="#" className="text-muted-foreground hover:text-accent transition-colors">For Clinics</a>
+                                <button
+                                    onClick={() => scrollToHowItWorks('employer')}
+                                    className="text-muted-foreground hover:text-accent transition-colors"
+                                >
+                                    For Employers/Facilities
+                                </button>
                             </li>
                             <li>
-                                <a href="#" className="text-muted-foreground hover:text-accent transition-colors">For Professionals</a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-muted-foreground hover:text-accent transition-colors">Pricing</a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-muted-foreground hover:text-accent transition-colors">FAQs</a>
+                                <button
+                                    onClick={() => scrollToHowItWorks('professional')}
+                                    className="text-muted-foreground hover:text-accent transition-colors"
+                                >
+                                    For Professionals
+                                </button>
                             </li>
                         </ul>
                     </div>
