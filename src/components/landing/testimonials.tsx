@@ -8,50 +8,50 @@ import { cn } from '@/lib/utils';
 const testimonials = [
     {
         id: 1,
-        name: "Dr. Sarah W.",
-        role: "Medical Director",
+        name: "Medical Director",
+        role: "",
         facility: "A Clinic in Nairobi",
-        avatar: "SW",
+        avatar: "MD",
         rating: 5,
         text: "CareStint has transformed how we handle staffing shortages. We can now fill urgent shifts within hours instead of days. The quality of professionals on the platform is exceptional.",
         type: "employer"
     },
     {
         id: 2,
-        name: "James O.",
-        role: "Registered Nurse",
+        name: "Registered Nurse",
+        role: "",
         facility: "Freelance Professional",
-        avatar: "JO",
+        avatar: "RN",
         rating: 5,
         text: "As a nurse looking for flexible work, CareStint is perfect. I choose when and where I work, and the automated payments are always on time. Highly recommended!",
         type: "professional"
     },
     {
         id: 3,
-        name: "Dr. Michael K.",
-        role: "Hospital Administrator",
+        name: "Hospital Administrator",
+        role: "",
         facility: "A Hospital in Eldoret",
-        avatar: "MK",
+        avatar: "HA",
         rating: 5,
         text: "The verification process gives us confidence that every professional we hire is fully licensed and qualified. The risk scoring feature is incredibly helpful.",
         type: "employer"
     },
     {
         id: 4,
-        name: "Grace M.",
-        role: "Clinical Officer",
+        name: "Clinical Officer",
+        role: "",
         facility: "Freelance Professional",
-        avatar: "GM",
+        avatar: "CO",
         rating: 5,
         text: "I've worked over 50 stints through CareStint. The platform is easy to use, and I love being able to see my earnings and ratings all in one place.",
         type: "professional"
     },
     {
         id: 5,
-        name: "Daniel K.",
-        role: "Operations Manager",
+        name: "Operations Manager",
+        role: "",
         facility: "A Nursing Home in Kiambu",
-        avatar: "DK",
+        avatar: "OM",
         rating: 5,
         text: "The automated verification and dispute resolution features save us hours of administrative work. It's the most efficient staffing solution we've used.",
         type: "employer"
@@ -139,7 +139,7 @@ export function Testimonials() {
                                 <div>
                                     <h4 className="font-semibold">{testimonials[activeIndex].name}</h4>
                                     <p className="text-sm text-muted-foreground">
-                                        {testimonials[activeIndex].role} • {testimonials[activeIndex].facility}
+                                        {testimonials[activeIndex].facility}
                                     </p>
                                 </div>
                             </div>

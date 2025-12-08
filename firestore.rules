@@ -74,6 +74,16 @@ service cloud.firestore {
     match /marketplace_insights/{insightId} {
       allow read, write: if true;
     }
+
+    // ===== SUPERADMINS =====
+    match /superadmins/{superadminId} {
+      allow read, write: if true;
+    }
+
+    // ===== WAITLIST =====
+    match /waitlist/{entryId} {
+      allow read, write: if true;
+    }
   }
 }
 

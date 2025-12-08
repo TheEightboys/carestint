@@ -105,6 +105,7 @@ export function HowItWorks() {
                 <div className="flex justify-center mb-12">
                     <div className="inline-flex rounded-full bg-secondary/50 p-1 backdrop-blur">
                         <Button
+                            data-tab="employer"
                             variant={activeTab === 'employer' ? 'default' : 'ghost'}
                             className={cn(
                                 "rounded-full px-6 transition-all",
@@ -116,6 +117,7 @@ export function HowItWorks() {
                             For Employers
                         </Button>
                         <Button
+                            data-tab="professional"
                             variant={activeTab === 'professional' ? 'default' : 'ghost'}
                             className={cn(
                                 "rounded-full px-6 transition-all",

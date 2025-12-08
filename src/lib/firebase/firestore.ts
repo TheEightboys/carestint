@@ -622,6 +622,31 @@ export const updateApplicationStatus = async (id: string, status: ApplicationSta
     }
 }
 
+export const withdrawApplication = async (applicationId: string) => {
+    const firestore = getDb();
+    try {
+        const docRef = doc(firestore, 'stintApplications', applicationId);
+        await updateDoc(docRef, {
+            status: 'withdrawn',
+            withdrawnAt: serverTimestamp(),
+        });
+
+        await addAuditLog({
+            actorType: 'professional',
+            actorId: 'system',
+            entityType: 'application',
+            entityId: applicationId,
+            action: 'APPLICATION_WITHDRAWN',
+            description: 'Application withdrawn by professional',
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Error withdrawing application:", error);
+        throw error;
+    }
+}
+
 // =============================================
 // DISPUTE SERVICES
 // =============================================
@@ -1017,3 +1042,141 @@ export const getDashboardStats = async () => {
         };
     }
 }
+
+// =============================================
+// SUPERADMIN SERVICES
+// =============================================
+
+export const addSuperadmin = async (superadminData: {
+    email: string;
+    uid: string;
+    role: string;
+}) => {
+    const firestore = getDb();
+    try {
+        const docRef = await addDoc(collection(firestore, 'superadmins'), {
+            ...superadminData,
+            createdAt: serverTimestamp(),
+        });
+
+        await addAuditLog({
+            actorType: 'system',
+            entityType: 'superadmin',
+            entityId: docRef.id,
+            action: 'SUPERADMIN_CREATED',
+            description: `SuperAdmin account created for ${superadminData.email}`,
+        });
+
+        return docRef.id;
+    } catch (error) {
+        console.error('Error adding superadmin:', error);
+        throw error;
+    }
+};
+
+export const getSuperadminByEmail = async (email: string) => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'superadmins'), where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting superadmin by email:', error);
+        return null;
+    }
+};
+
+export const getSuperadminByUid = async (uid: string) => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'superadmins'), where('uid', '==', uid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting superadmin by UID:', error);
+        return null;
+    }
+};
+
+export const getAllSuperadmins = async () => {
+    const firestore = getDb();
+    try {
+        const querySnapshot = await getDocs(collection(firestore, 'superadmins'));
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error getting all superadmins:', error);
+        return [];
+    }
+};
+
+// =============================================
+// WAITLIST SERVICES
+// =============================================
+
+export const addWaitlistEntry = async (data: {
+    email: string;
+    name?: string;
+    userType: 'professional' | 'employer';
+}) => {
+    const firestore = getDb();
+    try {
+        // Check if email already exists
+        const existingQuery = query(
+            collection(firestore, 'waitlist'),
+            where('email', '==', data.email.toLowerCase())
+        );
+        const existing = await getDocs(existingQuery);
+
+        if (!existing.empty) {
+            throw new Error('This email is already on the waitlist!');
+        }
+
+        const docRef = await addDoc(collection(firestore, 'waitlist'), {
+            email: data.email.toLowerCase(),
+            name: data.name || null,
+            userType: data.userType,
+            source: 'landing_page',
+            notified: false,
+            createdAt: serverTimestamp(),
+        });
+
+        return docRef.id;
+    } catch (error) {
+        console.error('Error adding waitlist entry:', error);
+        throw error;
+    }
+};
+
+export const getWaitlistEntries = async () => {
+    const firestore = getDb();
+    try {
+        const q = query(
+            collection(firestore, 'waitlist'),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error('Error getting waitlist entries:', error);
+        return [];
+    }
+};
+
+export const getWaitlistCount = async () => {
+    const firestore = getDb();
+    try {
+        const querySnapshot = await getDocs(collection(firestore, 'waitlist'));
+        return querySnapshot.size;
+    } catch (error) {
+        console.error('Error getting waitlist count:', error);
+        return 0;
+    }
+};

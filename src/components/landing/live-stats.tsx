@@ -122,7 +122,6 @@ export function LiveStats() {
                             value={stat.value}
                             label={stat.label}
                             suffix={stat.suffix}
-                            prefix={stat.prefix}
                             color={stat.color}
                             delay={index * 100}
                         />

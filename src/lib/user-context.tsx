@@ -3,14 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth } from '@/lib/firebase/clientApp';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { getEmployerByEmail, getProfessionalByEmail } from '@/lib/firebase/firestore';
+import { getEmployerByEmail, getProfessionalByEmail, getSuperadminByEmail } from '@/lib/firebase/firestore';
 
 export type UserRole = 'employer' | 'professional' | 'superadmin' | null;
 
 interface UserProfile {
     id: string;
     email: string;
-    phone?: string; // Phone comes from profile data, not auth
+    phone?: string;
     status: string;
     // Employer-specific
     facilityName?: string;
@@ -69,7 +69,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     const loadUserProfile = async (email: string) => {
         try {
-            // Check for employer profile first
+            // Check for superadmin first
+            const superadmin = await getSuperadminByEmail(email) as any;
+            if (superadmin) {
+                setUserProfile({
+                    id: superadmin.id,
+                    email,
+                    status: 'active',
+                    fullName: 'SuperAdmin',
+                });
+                setUserRole('superadmin');
+                return;
+            }
+
+            // Check for employer profile
             const employer = await getEmployerByEmail(email) as any;
             if (employer) {
                 setUserProfile({

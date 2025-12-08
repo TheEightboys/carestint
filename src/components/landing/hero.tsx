@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useLayoutEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,18 +11,37 @@ import { AnimatedBackground } from './animated-background';
 import { FloatingElements } from './floating-elements';
 import { AuthModal } from '@/components/auth/auth-modal';
 import type { UserType } from '@/components/auth/auth-modal';
-import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, Shield, ArrowRight, Building } from 'lucide-react';
+import { useUser } from '@/lib/user-context';
+import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, ArrowRight, Building, CheckCircle2, LayoutDashboard, Loader2 } from 'lucide-react';
 import { gsap } from "gsap";
 
 export function Hero() {
+  const router = useRouter();
+  const { user, userRole, isLoading } = useUser();
+
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authUserType, setAuthUserType] = useState<UserType>('professional');
   const heroRef = useRef<HTMLDivElement>(null);
 
+  const isLoggedIn = !!user && !!userRole;
+
   const handleAuthClick = (type: UserType) => {
     setAuthUserType(type);
     setAuthModalOpen(true);
+  };
+
+  const getDashboardUrl = () => {
+    switch (userRole) {
+      case 'superadmin':
+        return '/dashboard/superadmin';
+      case 'employer':
+        return '/dashboard/employer';
+      case 'professional':
+        return '/dashboard/professional';
+      default:
+        return '/';
+    }
   };
 
   useLayoutEffect(() => {
@@ -116,56 +136,87 @@ export function Hero() {
                 </p>
               </div>
 
-              {/* Hero CTAs */}
+              {/* Hero CTAs - Auth Aware */}
               <div className="hero-subline flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  onClick={() => handleAuthClick('professional')}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent/30 text-lg px-8 py-6"
-                >
-                  Create Account
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => handleAuthClick('employer')}
-                  className="transition-all duration-300 hover:scale-105 hover:border-accent text-lg px-8 py-6"
-                >
-                  <Building className="mr-2 h-5 w-5" />
-                  Sign In
-                </Button>
+                {isLoading ? (
+                  <Button size="lg" disabled className="px-8 py-6">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading...
+                  </Button>
+                ) : isLoggedIn ? (
+                  // Logged in - show Go to Dashboard
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={() => router.push(getDashboardUrl())}
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent/30 text-lg px-8 py-6"
+                    >
+                      <LayoutDashboard className="mr-2 h-5 w-5" />
+                      Go to Dashboard
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => setHowItWorksOpen(true)}
+                      className="transition-all duration-300 hover:scale-105 hover:border-accent text-lg px-8 py-6"
+                    >
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      How it works
+                    </Button>
+                  </>
+                ) : (
+                  // Not logged in - show Create Account / Sign In
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={() => handleAuthClick('professional')}
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent/30 text-lg px-8 py-6"
+                    >
+                      Create Account
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => handleAuthClick('employer')}
+                      className="transition-all duration-300 hover:scale-105 hover:border-accent text-lg px-8 py-6"
+                    >
+                      <Building className="mr-2 h-5 w-5" />
+                      Sign In
+                    </Button>
+                  </>
+                )}
               </div>
 
-              {/* Trust badges - tightened layout */}
-              <div className="flex flex-wrap gap-3">
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent border border-accent/20">
-                  <Shield className="h-3.5 w-3.5" />
-                  <span>License-verified professionals</span>
+              {/* Trust badges - tightened layout with checkmarks */}
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="trust-badge flex items-center gap-1.5 text-accent">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">700+ Verified Professionals</span>
                 </div>
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary-foreground border border-primary/20">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Compliant, secure payment</span>
+                <div className="trust-badge flex items-center gap-1.5 text-accent">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">Pay-as-you-book</span>
                 </div>
-                <div className="trust-badge flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground border border-border">
-                  <Building className="h-3.5 w-3.5" />
-                  <span>Trusted by 300+ Employers/Facilities</span>
+                <div className="trust-badge flex items-center gap-1.5 text-accent">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">Trusted by 300+ clinics</span>
                 </div>
               </div>
 
               {/* Stats row */}
               <div className="flex flex-wrap gap-8 pt-4">
                 <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">1,200+</div>
+                  <div className="text-3xl font-bold font-headline gradient-text">700+</div>
                   <div className="text-sm text-muted-foreground">Verified Professionals</div>
                 </div>
                 <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">500+</div>
-                  <div className="text-sm text-muted-foreground">Monthly Stints</div>
+                  <div className="text-3xl font-bold font-headline gradient-text">100+</div>
+                  <div className="text-sm text-muted-foreground">Partner Facilities</div>
                 </div>
                 <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">98%</div>
-                  <div className="text-sm text-muted-foreground">Fill Rate</div>
+                  <div className="text-3xl font-bold font-headline gradient-text">4,500+</div>
+                  <div className="text-sm text-muted-foreground">Stints Completed</div>
                 </div>
               </div>
             </div>

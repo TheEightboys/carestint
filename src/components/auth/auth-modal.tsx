@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,11 +29,17 @@ interface AuthModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   userType: UserType;
+  defaultMode?: AuthMode;
 }
 
-export function AuthModal({ isOpen, onOpenChange, userType }: AuthModalProps) {
+export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signin' }: AuthModalProps) {
   const { toast } = useToast();
-  const [authMode, setAuthMode] = useState<AuthMode>('signin');
+  const [authMode, setAuthMode] = useState<AuthMode>(defaultMode);
+
+  // Update authMode when defaultMode changes
+  useEffect(() => {
+    setAuthMode(defaultMode);
+  }, [defaultMode]);
 
   // Auth states
   const [emailOrUsername, setEmailOrUsername] = useState('');

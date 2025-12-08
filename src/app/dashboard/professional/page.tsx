@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar } from "lucide-react";
+import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvailableStints } from "@/components/dashboard/professional/available-stints";
@@ -13,10 +13,20 @@ import { EarningsHistory } from "@/components/dashboard/professional/earnings-hi
 import { AvailabilityCalendar } from "@/components/dashboard/professional/availability-calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getProfessionalByEmail, getApplicationsByProfessional } from "@/lib/firebase/firestore";
 import { useUser } from "@/lib/user-context";
 import { auth } from "@/lib/firebase/clientApp";
 import { signOut } from "firebase/auth";
+import Link from "next/link";
 
 interface ProfessionalData {
     id: string;
@@ -146,10 +156,46 @@ export default function ProfessionalDashboardPage() {
                     </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${professionalName}`} alt={professionalName} />
+                                    <AvatarFallback className="bg-accent/10 text-accent">
+                                        {professionalName?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{professionalName}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">
+                                        {professional?.email || user?.email}
+                                    </p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/professional/settings" className="cursor-pointer">
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    <span>Settings</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/professional?tab=profile" className="cursor-pointer">
+                                    <User className="mr-2 h-4 w-4" />
+                                    <span>Profile</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Sign out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-4 md:gap-6">

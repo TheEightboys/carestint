@@ -89,7 +89,9 @@ export type AuditAction =
     | 'LICENSE_VERIFIED'
     | 'LICENSE_EXPIRED'
     | 'RISK_SCORE_UPDATED'
-    | 'CONFIG_UPDATED';
+    | 'CONFIG_UPDATED'
+    | 'SUPERADMIN_CREATED'
+    | 'APPLICATION_WITHDRAWN';
 
 export type ActorType = 'superadmin' | 'system' | 'employer' | 'professional';
 
@@ -100,7 +102,8 @@ export type EntityType =
     | 'application'
     | 'dispute'
     | 'payout'
-    | 'config';
+    | 'config'
+    | 'superadmin';
 
 // ===== Primary Roles =====
 

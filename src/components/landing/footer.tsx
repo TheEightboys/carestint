@@ -11,12 +11,10 @@ export function Footer() {
         const element = document.getElementById('how-it-works');
         if (element) {
             element.scrollIntoView({ behavior: 'smooth' });
-            // After scrolling, trigger a click on the appropriate tab
+            // After scrolling, trigger a click on the appropriate tab using data attribute
             setTimeout(() => {
                 const button = document.querySelector(
-                    tab === 'employer'
-                        ? 'button:has(.lucide-building)'
-                        : 'button:has(.lucide-user-check)'
+                    `[data-tab="${tab}"]`
                 ) as HTMLButtonElement;
                 if (button) button.click();
             }, 500);
@@ -98,7 +96,6 @@ export function Footer() {
                 <div className="mt-12 pt-6 border-t border-border/50">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
                         <p className="flex items-center gap-1">
-                            Made with <Heart className="h-3 w-3 text-red-400 fill-red-400" /> for healthcare in Africa
                         </p>
                         <div className="flex items-center gap-4">
                             <Link href="/dashboard/superadmin" className="opacity-30 hover:opacity-100 transition-opacity text-xs">
