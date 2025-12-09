@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   User, Mail, Phone, MapPin, Calendar, Star, Briefcase,
   BadgeDollarSign, ShieldCheck, Lock, AlertCircle, CheckCircle,
-  Send
+  Send, Camera, Upload, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, updateDoc } from "firebase/firestore";
+import { storage, db } from "@/lib/firebase/clientApp";
 
 interface ProfessionalData {
   id: string;
@@ -48,6 +53,7 @@ interface ProfessionalData {
   averageRating?: number;
   status: string;
   verifiedAt?: string;
+  photoURL?: string;
 }
 
 interface ProfessionalProfileProps {
@@ -62,9 +68,72 @@ export function ProfessionalProfile({ professional }: ProfessionalProfileProps) 
   const [selectedField, setSelectedField] = useState<string>('');
   const [requestReason, setRequestReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [currentPhotoURL, setCurrentPhotoURL] = useState(professional.photoURL || '');
 
   const isVerified = professional.status === 'active' || professional.status === 'approved';
   const isFieldLocked = (field: string) => isVerified && LOCKED_FIELDS.includes(field);
+
+  // Handle profile picture upload
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, `profile-photos/${professional.id}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update Firestore document
+      const professionalRef = doc(db, 'professionals', professional.id);
+      await updateDoc(professionalRef, { photoURL: downloadURL });
+
+      setCurrentPhotoURL(downloadURL);
+
+      toast({
+        title: "Photo Updated",
+        description: "Your profile picture has been updated successfully.",
+      });
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const getUserInitials = () => {
+    if (professional.fullName) {
+      return professional.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return 'U';
+  };
 
   const handleRequestChange = async () => {
     if (!selectedField || !requestReason.trim()) {
@@ -145,6 +214,49 @@ export function ProfessionalProfile({ professional }: ProfessionalProfileProps) 
             </div>
           </div>
         )}
+
+        {/* Profile Picture Section */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Profile Picture</h3>
+          <div className="flex items-center gap-6 p-4 rounded-lg border">
+            <div className="relative">
+              <Avatar className="h-24 w-24 border-2 border-accent/20">
+                {currentPhotoURL ? (
+                  <AvatarImage src={currentPhotoURL} alt={professional.fullName || 'Profile'} />
+                ) : null}
+                <AvatarFallback className="text-2xl bg-accent/10 text-accent">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              {isUploadingPhoto && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm font-medium">Update your profile picture</p>
+              <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Max 5MB.</p>
+              <div className="flex gap-2">
+                <label className="cursor-pointer">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                    disabled={isUploadingPhoto}
+                  />
+                  <Button variant="outline" size="sm" asChild disabled={isUploadingPhoto}>
+                    <span>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Photo
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Personal Information */}
         <div className="space-y-3">

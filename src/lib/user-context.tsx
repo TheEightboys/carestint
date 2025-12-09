@@ -12,6 +12,8 @@ interface UserProfile {
     email: string;
     phone?: string;
     status: string;
+    photoURL?: string;
+    emailVerified?: boolean;
     // Employer-specific
     facilityName?: string;
     contactPerson?: string;
@@ -90,6 +92,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     email,
                     phone: employer.phone,
                     status: employer.status as string,
+                    photoURL: employer.photoURL as string,
                     facilityName: employer.facilityName as string,
                     contactPerson: employer.contactPerson as string,
                     city: employer.city as string,
@@ -106,6 +109,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     email,
                     phone: professional.phone,
                     status: professional.status as string,
+                    photoURL: professional.photoURL as string,
                     fullName: professional.fullName as string,
                     primaryRole: professional.primaryRole as string,
                     city: professional.locations as string,

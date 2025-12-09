@@ -12,7 +12,7 @@ import { FloatingElements } from './floating-elements';
 import { AuthModal } from '@/components/auth/auth-modal';
 import type { UserType } from '@/components/auth/auth-modal';
 import { useUser } from '@/lib/user-context';
-import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, ArrowRight, Building, CheckCircle2, LayoutDashboard, Loader2 } from 'lucide-react';
+import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, ArrowRight, Building, CheckCircle2, LayoutDashboard, Loader2, Stethoscope, ShieldCheck } from 'lucide-react';
 import { gsap } from "gsap";
 
 export function Hero() {
@@ -21,13 +21,21 @@ export function Hero() {
 
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userTypePickerOpen, setUserTypePickerOpen] = useState(false);
+  const [authAction, setAuthAction] = useState<'signin' | 'signup'>('signin');
   const [authUserType, setAuthUserType] = useState<UserType>('professional');
   const heroRef = useRef<HTMLDivElement>(null);
 
   const isLoggedIn = !!user && !!userRole;
 
-  const handleAuthClick = (type: UserType) => {
+  const handleAuthClick = (action: 'signin' | 'signup') => {
+    setAuthAction(action);
+    setUserTypePickerOpen(true);
+  };
+
+  const handleUserTypeSelect = (type: UserType) => {
     setAuthUserType(type);
+    setUserTypePickerOpen(false);
     setAuthModalOpen(true);
   };
 
@@ -169,7 +177,7 @@ export function Hero() {
                   <>
                     <Button
                       size="lg"
-                      onClick={() => handleAuthClick('professional')}
+                      onClick={() => handleAuthClick('signup')}
                       className="bg-accent text-accent-foreground hover:bg-accent/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent/30 text-lg px-8 py-6"
                     >
                       Create Account
@@ -178,10 +186,10 @@ export function Hero() {
                     <Button
                       size="lg"
                       variant="outline"
-                      onClick={() => handleAuthClick('employer')}
+                      onClick={() => handleAuthClick('signin')}
                       className="transition-all duration-300 hover:scale-105 hover:border-accent text-lg px-8 py-6"
                     >
-                      <Building className="mr-2 h-5 w-5" />
+                      <Users className="mr-2 h-5 w-5" />
                       Sign In
                     </Button>
                   </>
@@ -206,17 +214,26 @@ export function Hero() {
             </div>
 
             <div className="relative flex flex-col gap-6">
-              {/* Promotional Banner - Above cards */}
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-accent via-primary to-accent p-[2px] shadow-xl shadow-accent/20">
-                <div className="rounded-2xl bg-background/95 backdrop-blur-sm px-4 py-3 sm:px-6 sm:py-4">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xl animate-bounce">
+              {/* Promotional Banner - Above cards - Enhanced */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-accent via-primary to-accent p-[2px] shadow-xl shadow-accent/30 animate-pulse-glow">
+                {/* Shimmer effect overlay */}
+                <div className="absolute inset-0 animate-shimmer pointer-events-none" />
+                <div className="rounded-2xl bg-background/95 backdrop-blur-sm px-4 py-4 sm:px-6 sm:py-5">
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent/30 to-primary/30 text-2xl animate-bounce">
                       🎉
                     </div>
                     <div className="text-center sm:text-left">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Limited Time Offer</p>
-                      <p className="text-sm sm:text-base font-bold gradient-text">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent uppercase tracking-wider">
+                          🔥 Limited Time
+                        </span>
+                      </div>
+                      <p className="text-sm sm:text-lg font-bold gradient-text">
                         Employers, Get KSh 1,000 Off Your First Posted Shift!
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Use code <span className="font-mono font-bold text-accent">Welcome1000</span> at checkout
                       </p>
                     </div>
                   </div>
@@ -344,7 +361,90 @@ export function Hero() {
         isOpen={authModalOpen}
         onOpenChange={setAuthModalOpen}
         userType={authUserType}
+        defaultMode={authAction}
       />
+
+      {/* User Type Selection Modal */}
+      {userTypePickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setUserTypePickerOpen(false)}
+          />
+          <div className="relative z-50 w-full max-w-lg mx-4 bg-background border rounded-2xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="font-headline font-semibold text-2xl text-center mb-2">
+              {authAction === 'signin' ? 'Sign In' : 'Create Account'}
+            </h3>
+            <p className="text-center text-muted-foreground mb-6">
+              Choose how you want to use CareStint
+            </p>
+
+            <div className="grid gap-4">
+              {/* Professional Option */}
+              <button
+                onClick={() => handleUserTypeSelect('professional')}
+                className="flex items-center gap-4 p-6 rounded-xl border-2 border-border hover:border-accent hover:bg-accent/5 transition-all group text-left"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent/10 group-hover:bg-accent/20 transition-colors">
+                  <Stethoscope className="h-7 w-7 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg group-hover:text-accent transition-colors">
+                    I'm a Healthcare Professional
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Nurse, Dentist, Lab Tech, Pharmacist, etc.
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-accent transition-colors" />
+              </button>
+
+              {/* Employer Option */}
+              <button
+                onClick={() => handleUserTypeSelect('employer')}
+                className="flex items-center gap-4 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group text-left"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Building className="h-7 w-7 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                    I'm an Employer / Facility
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Hospital, Clinic, Nursing Home, Lab, etc.
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+
+              {/* Admin Option */}
+              <button
+                onClick={() => {
+                  setUserTypePickerOpen(false);
+                  router.push('/admin/login');
+                }}
+                className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-border/50 hover:border-muted-foreground/50 hover:bg-muted/30 transition-all group text-left"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                  <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                    Admin Access
+                  </h3>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Button variant="ghost" onClick={() => setUserTypePickerOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

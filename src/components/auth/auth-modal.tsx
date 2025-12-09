@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,7 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowRight, Mail, Lock, User } from 'lucide-react';
+import { Loader2, ArrowRight, Mail, Lock, User, CheckCircle2, RefreshCw } from 'lucide-react';
 import { auth } from '@/lib/firebase/clientApp';
 import {
   createUserWithEmailAndPassword,
@@ -24,18 +23,19 @@ import {
 } from 'firebase/auth';
 
 export type UserType = 'employer' | 'professional';
-type AuthMode = 'signin' | 'signup';
+type AuthMode = 'signin' | 'signup' | 'verification-pending';
 
 interface AuthModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   userType: UserType;
-  defaultMode?: AuthMode;
+  defaultMode?: 'signin' | 'signup';
 }
 
 export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signin' }: AuthModalProps) {
   const { toast } = useToast();
   const [authMode, setAuthMode] = useState<AuthMode>(defaultMode);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   // Update authMode when defaultMode changes
   useEffect(() => {
@@ -43,13 +43,12 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
   }, [defaultMode]);
 
   // Auth states
-  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // Email/Password Sign Up
   const handleEmailSignUp = async (e: React.FormEvent) => {
@@ -69,13 +68,14 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
         await sendEmailVerification(userCredential.user);
       }
 
-      toast({
-        title: 'Account created!',
-        description: 'A verification email has been sent. Please verify your email, then complete your profile.',
-      });
+      // Show verification pending state
+      setPendingEmail(email);
+      setAuthMode('verification-pending');
 
-      const redirectUrl = `/onboarding/${userType}?email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}`;
-      window.location.href = redirectUrl;
+      toast({
+        title: 'Verification email sent!',
+        description: 'Please check your inbox and verify your email to continue.',
+      });
     } catch (error: any) {
       console.error('Sign up error:', error);
       let message = 'Failed to create account. Please try again.';
@@ -100,16 +100,26 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
     }
   };
 
-  // Email/Password Sign In (with Username or Email)
+  // Email Sign In
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Determine if input is email or username
-    const loginEmail = emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@carestint.generated.email`;
-
     try {
-      await signInWithEmailAndPassword(auth, loginEmail, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Check if email is verified
+      if (!userCredential.user.emailVerified) {
+        setPendingEmail(email);
+        setAuthMode('verification-pending');
+        toast({
+          variant: 'destructive',
+          title: 'Email not verified',
+          description: 'Please verify your email before signing in.',
+        });
+        setIsLoading(false);
+        return;
+      }
 
       toast({
         title: 'Welcome back!',
@@ -143,6 +153,82 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
     }
   };
 
+  // Resend Verification Email
+  const handleResendVerification = async () => {
+    if (!auth.currentUser) {
+      // Try to sign in first to get the user object
+      try {
+        setIsResending(true);
+        const userCredential = await signInWithEmailAndPassword(auth, pendingEmail, password);
+        await sendEmailVerification(userCredential.user);
+        toast({
+          title: 'Verification email sent!',
+          description: 'Please check your inbox.',
+        });
+      } catch {
+        toast({
+          variant: 'destructive',
+          title: 'Could not resend',
+          description: 'Please try signing in again.',
+        });
+      } finally {
+        setIsResending(false);
+      }
+      return;
+    }
+
+    try {
+      setIsResending(true);
+      await sendEmailVerification(auth.currentUser);
+      toast({
+        title: 'Verification email sent!',
+        description: 'Please check your inbox.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to send email',
+        description: 'Please wait a moment and try again.',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // Check verification and continue
+  const handleContinueAfterVerification = async () => {
+    setIsLoading(true);
+    try {
+      // Reload user to get fresh emailVerified status
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          toast({
+            title: 'Email verified!',
+            description: 'Redirecting to complete your profile...',
+          });
+          const redirectUrl = `/onboarding/${userType}?email=${encodeURIComponent(pendingEmail)}&name=${encodeURIComponent(fullName)}`;
+          window.location.href = redirectUrl;
+          return;
+        }
+      }
+
+      toast({
+        variant: 'destructive',
+        title: 'Email not verified yet',
+        description: 'Please click the verification link in your email.',
+      });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please try signing in again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Password Reset
   const handleForgotPassword = async () => {
     if (!email) {
@@ -160,7 +246,7 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
         title: 'Reset email sent',
         description: 'Check your inbox for password reset instructions.',
       });
-    } catch (error: any) {
+    } catch {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -173,11 +259,10 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
     onOpenChange(open);
     if (!open) {
       setTimeout(() => {
-        setEmailOrUsername('');
         setEmail('');
-        setUsername('');
         setPassword('');
         setFullName('');
+        setPendingEmail('');
         setAuthMode('signin');
       }, 300);
     }
@@ -189,135 +274,190 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-headline text-2xl flex items-center gap-2">
-            <span>{userTypeIcon}</span>
-            {authMode === 'signin' ? 'Sign in' : 'Sign up'} as {userTypeName}
-          </DialogTitle>
-          <DialogDescription>
-            {authMode === 'signin' ? 'Enter your username or email and password to continue.' : 'Create a new account to get started.'}
-          </DialogDescription>
-        </DialogHeader>
+        {authMode === 'verification-pending' ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-headline text-2xl flex items-center gap-2">
+                <span>📧</span> Verify Your Email
+              </DialogTitle>
+              <DialogDescription>
+                We've sent a verification link to <strong>{pendingEmail}</strong>
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="mt-4">
-          {authMode === 'signin' ? (
-            <form onSubmit={handleEmailSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="emailOrUsername" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Username or Email
-                </Label>
-                <Input
-                  id="emailOrUsername"
-                  type="text"
-                  placeholder="username or you@example.com"
-                  value={emailOrUsername}
-                  onChange={(e) => setEmailOrUsername(e.target.value)}
-                  required
-                />
+            <div className="mt-4 space-y-6">
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="h-16 w-16 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                  <Mail className="h-8 w-8 text-accent" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Check your inbox</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Click the verification link in your email, then come back here and click "Continue" to complete your profile.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin mr-2" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-              <div className="flex flex-col gap-2 text-center text-sm">
-                <button type="button" onClick={handleForgotPassword} className="text-accent hover:underline">
-                  Forgot password?
-                </button>
-                <p className="text-muted-foreground">
-                  Don't have an account?{' '}
-                  <button type="button" onClick={() => setAuthMode('signup')} className="text-accent hover:underline">
-                    Sign up
+
+              <div className="space-y-3">
+                <Button
+                  onClick={handleContinueAfterVerification}
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
+                  {isLoading ? 'Checking...' : 'I\'ve Verified - Continue'}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleResendVerification}
+                  className="w-full"
+                  disabled={isResending}
+                >
+                  {isResending ? (
+                    <Loader2 className="animate-spin mr-2" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {isResending ? 'Sending...' : 'Resend Verification Email'}
+                </Button>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  Wrong email?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('signup')}
+                    className="text-accent hover:underline"
+                  >
+                    Go back
                   </button>
                 </p>
               </div>
-            </form>
-          ) : (
-            <form onSubmit={handleEmailSignUp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Full Name
-                </Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="username" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="johndoe123"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signupEmail" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email
-                </Label>
-                <Input
-                  id="signupEmail"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signupPassword" className="flex items-center gap-2">
-                  <Lock className="h-4 w-4" />
-                  Password
-                </Label>
-                <Input
-                  id="signupPassword"
-                  type="password"
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2 h-4 w-4" />}
-                {isLoading ? 'Creating account...' : 'Create Account'}
-              </Button>
-              <p className="text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <button type="button" onClick={() => setAuthMode('signin')} className="text-accent hover:underline">
-                  Sign in
-                </button>
-              </p>
-            </form>
-          )}
-        </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="font-headline text-2xl flex items-center gap-2">
+                <span>{userTypeIcon}</span>
+                {authMode === 'signin' ? 'Sign in' : 'Sign up'} as {userTypeName}
+              </DialogTitle>
+              <DialogDescription>
+                {authMode === 'signin'
+                  ? 'Enter your email and password to continue.'
+                  : 'Create a new account to get started.'}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4">
+              {authMode === 'signin' ? (
+                <form onSubmit={handleEmailSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <ArrowRight className="mr-2 h-4 w-4" />}
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                  <div className="flex flex-col gap-2 text-center text-sm">
+                    <button type="button" onClick={handleForgotPassword} className="text-accent hover:underline">
+                      Forgot password?
+                    </button>
+                    <p className="text-muted-foreground">
+                      Don't have an account?{' '}
+                      <button type="button" onClick={() => setAuthMode('signup')} className="text-accent hover:underline">
+                        Sign up
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleEmailSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Full Name
+                    </Label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      placeholder="John Doe"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signupEmail" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email
+                    </Label>
+                    <Input
+                      id="signupEmail"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signupPassword" className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Password
+                    </Label>
+                    <Input
+                      id="signupPassword"
+                      type="password"
+                      placeholder="At least 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2 h-4 w-4" />}
+                    {isLoading ? 'Creating account...' : 'Create Account'}
+                  </Button>
+                  <p className="text-center text-sm text-muted-foreground">
+                    Already have an account?{' '}
+                    <button type="button" onClick={() => setAuthMode('signin')} className="text-accent hover:underline">
+                      Sign in
+                    </button>
+                  </p>
+                </form>
+              )}
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

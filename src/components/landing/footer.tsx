@@ -98,8 +98,8 @@ export function Footer() {
                         <p className="flex items-center gap-1">
                         </p>
                         <div className="flex items-center gap-4">
-                            <Link href="/dashboard/superadmin" className="opacity-30 hover:opacity-100 transition-opacity text-xs">
-                                Admin
+                            <Link href="/admin/login" className="hover:text-accent transition-colors">
+                                Admin Portal
                             </Link>
                             <p>© {currentYear} CareStint. All rights reserved.</p>
                         </div>

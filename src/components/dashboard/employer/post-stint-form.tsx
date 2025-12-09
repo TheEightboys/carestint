@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, PlusCircle, Info, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarIcon, PlusCircle, Info, Loader2, AlertTriangle, Tag, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +43,7 @@ import { addStint } from "@/lib/firebase/firestore";
 import { moderateStintPosting, calculateSettlement } from "@/lib/automation-service";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ProfessionalRole, ShiftType, UrgencyType } from "@/lib/types";
+import { getActivePromotions, canEmployerUsePromotion, type Promotion } from "@/lib/firebase/promotions";
 
 const ROLE_MAP: Record<string, ProfessionalRole> = {
   "Registered Nurse (RN)": "rn",
@@ -79,6 +80,12 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moderationWarnings, setModerationWarnings] = useState<string[]>([]);
 
+  // Promo code state
+  const [promoCode, setPromoCode] = useState('');
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -92,6 +99,61 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
       allowBids: false,
     },
   });
+
+  // Handle promo code validation
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoError('Please enter a promo code');
+      return;
+    }
+
+    setIsValidatingPromo(true);
+    setPromoError(null);
+
+    try {
+      const activePromos = await getActivePromotions();
+      const matchedPromo = activePromos.find(
+        (p) => p.name.toLowerCase() === promoCode.trim().toLowerCase()
+      );
+
+      if (!matchedPromo) {
+        setPromoError('Invalid promo code');
+        setAppliedPromo(null);
+        return;
+      }
+
+      // Check if employer can use this promo
+      const eligibility = await canEmployerUsePromotion(
+        matchedPromo.id!,
+        employerId,
+        new Date() // Use current date as employer signup date for checking
+      );
+
+      if (!eligibility.canUse) {
+        setPromoError(eligibility.reason || 'Promo code cannot be used');
+        setAppliedPromo(null);
+        return;
+      }
+
+      setAppliedPromo(matchedPromo);
+      setPromoError(null);
+      toast({
+        title: 'Promo code applied!',
+        description: `You'll get ${matchedPromo.creditAmount.toLocaleString()} KSh off this stint.`,
+      });
+    } catch (error) {
+      console.error('Promo validation error:', error);
+      setPromoError('Failed to validate promo code');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoCode('');
+    setPromoError(null);
+  };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsSubmitting(true);
@@ -167,16 +229,19 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   const calculatedFees = (rate: number) => {
     const settlement = calculateSettlement(rate, false);
     const urgentSettlement = calculateSettlement(rate, true);
+    const promoDiscount = appliedPromo?.creditAmount || 0;
     return {
       normalFee: settlement.bookingFee,
       urgentFee: urgentSettlement.bookingFee,
       clinicPays: settlement.clinicCharge,
       proReceives: settlement.professionalNet,
+      promoDiscount,
+      finalFee: Math.max(0, settlement.bookingFee - promoDiscount),
     };
   };
 
   const watchedRate = form.watch('rate');
-  const { urgentFee, normalFee, clinicPays, proReceives } = calculatedFees(watchedRate);
+  const { urgentFee, normalFee, clinicPays, proReceives, promoDiscount, finalFee } = calculatedFees(watchedRate);
 
 
   return (
@@ -403,6 +468,51 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               </Alert>
             )}
 
+            {/* Promo Code Section */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Promo Code
+              </label>
+              {appliedPromo ? (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-green-500/50 bg-green-500/10">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-600">
+                      "{appliedPromo.name}" applied - KSh {appliedPromo.creditAmount.toLocaleString()} off!
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={handleRemovePromo}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter promo code (e.g., Welcome1000)"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    className={promoError ? "border-red-500" : ""}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleApplyPromoCode}
+                    disabled={isValidatingPromo}
+                  >
+                    {isValidatingPromo ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
+                  </Button>
+                </div>
+              )}
+              {promoError && (
+                <p className="text-sm text-red-500">{promoError}</p>
+              )}
+            </div>
+
             <Card className="bg-secondary/50">
               <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
                 <Info className="h-4 w-4 text-muted-foreground" />
@@ -411,8 +521,22 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               <CardContent className="text-sm text-muted-foreground space-y-1 pt-0">
                 <div className="flex justify-between">
                   <span>Normal Notice Fee (15%):</span>
-                  <span className="font-medium text-foreground">KSh {normalFee.toLocaleString()}</span>
+                  <span className={`font-medium ${promoDiscount > 0 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                    KSh {normalFee.toLocaleString()}
+                  </span>
                 </div>
+                {promoDiscount > 0 && (
+                  <>
+                    <div className="flex justify-between text-green-600">
+                      <span>Promo Discount:</span>
+                      <span className="font-medium">- KSh {promoDiscount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-accent font-bold">
+                      <span>Your Fee:</span>
+                      <span>KSh {finalFee.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span>Urgent Notice Fee (20%):</span>
                   <span className="font-medium text-foreground">KSh {urgentFee.toLocaleString()}</span>

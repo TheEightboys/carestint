@@ -100,7 +100,7 @@ export function WaitlistModal({ trigger }: WaitlistModalProps) {
             <DialogTrigger asChild>
                 {trigger || defaultTrigger}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md border-accent/20 bg-gradient-to-br from-background to-secondary/30">
+            <DialogContent className="sm:max-w-md border-accent/30 bg-background/95 backdrop-blur-xl shadow-2xl">
                 {isSuccess ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                         <div className="h-16 w-16 rounded-full bg-accent/20 flex items-center justify-center mb-4 animate-bounce">

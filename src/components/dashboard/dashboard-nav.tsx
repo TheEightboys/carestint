@@ -13,7 +13,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface DashboardNavProps {
     title?: string;
@@ -112,6 +112,9 @@ export function DashboardNav({
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="rounded-full">
                                 <Avatar className="h-8 w-8">
+                                    {userProfile?.photoURL && (
+                                        <AvatarImage src={userProfile.photoURL} alt={userProfile.fullName || userProfile.facilityName || 'Profile'} />
+                                    )}
                                     <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                                         {getUserInitials()}
                                     </AvatarFallback>
