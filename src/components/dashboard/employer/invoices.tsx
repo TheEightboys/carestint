@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getInvoicesByEmployer } from '@/lib/firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { PaymentModal } from './payment-modal';
 
 interface Invoice {
     id: string;
@@ -67,7 +68,20 @@ export function Invoices({ employerId }: InvoicesProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'booking_fee' | 'cancellation_fee' | 'permanent_hire_fee'>('all');
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const { toast } = useToast();
+
+    const handlePayNow = (invoice: Invoice) => {
+        setSelectedInvoice(invoice);
+        setPaymentModalOpen(true);
+    };
+
+    const handlePaymentSuccess = () => {
+        loadInvoices(); // Refresh invoices after successful payment
+        setPaymentModalOpen(false);
+        setSelectedInvoice(null);
+    };
 
     useEffect(() => {
         loadInvoices();
@@ -330,7 +344,7 @@ export function Invoices({ employerId }: InvoicesProps) {
                                                             <Download className="h-4 w-4" />
                                                         </Button>
                                                         {!invoice.isPaid && (
-                                                            <Button size="sm">
+                                                            <Button size="sm" onClick={() => handlePayNow(invoice)}>
                                                                 <CreditCard className="h-4 w-4 mr-1" />
                                                                 Pay Now
                                                             </Button>
@@ -354,6 +368,17 @@ export function Invoices({ employerId }: InvoicesProps) {
                     </>
                 )}
             </CardContent>
+
+            {/* Payment Modal */}
+            <PaymentModal
+                invoice={selectedInvoice}
+                isOpen={paymentModalOpen}
+                onClose={() => {
+                    setPaymentModalOpen(false);
+                    setSelectedInvoice(null);
+                }}
+                onPaymentSuccess={handlePaymentSuccess}
+            />
         </Card>
     );
 }

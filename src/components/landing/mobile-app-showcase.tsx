@@ -177,7 +177,7 @@ export function MobileAppShowcase() {
                                         <div className="text-[9px] sm:text-[11px] font-semibold text-white">Lab Tech</div>
                                         <div className="text-[8px] sm:text-[10px] font-bold text-accent">KSh 4,000</div>
                                     </div>
-                                    <div className="text-[7px] sm:text-[9px] text-slate-400">Aga Khan • Half-day</div>
+                                    <div className="text-[7px] sm:text-[9px] text-slate-400">Rusinga • Half-day</div>
                                     <div className="mt-1.5 flex gap-1">
                                         <div className="px-1.5 py-0.5 bg-accent/20 rounded text-[6px] sm:text-[8px] text-accent">Apply</div>
                                     </div>
@@ -254,7 +254,7 @@ export function MobileAppShowcase() {
                             {/* App Header */}
                             <div className="px-3 sm:px-4 pt-1 pb-2">
                                 <div className="text-[10px] sm:text-xs text-primary">Your Facility</div>
-                                <div className="text-sm sm:text-base font-bold text-white">Aga Khan Hospital</div>
+                                <div className="text-sm sm:text-base font-bold text-white">Rusinga Nursing Home</div>
                             </div>
 
                             {/* Stats Row */}

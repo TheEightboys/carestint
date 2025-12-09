@@ -3,7 +3,7 @@ export const availableStints = [
     {
         id: "STINT-101",
         role: "Registered Nurse (RN)",
-        facility: "Aga Khan University Hospital",
+        facility: "Rusinga Nursing Home",
         location: "Nairobi",
         shift: "Full-day",
         date: "2024-08-15",

@@ -303,7 +303,7 @@ export function Hero() {
                       <div className="mt-3 space-y-1.5">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
-                          <span>Aga Khan Hospital, Nairobi</span>
+                          <span>Rusinga Nursing Home, Nairobi</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-3.5 w-3.5" />

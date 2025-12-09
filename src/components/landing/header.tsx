@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { AuthModal } from '@/components/auth/auth-modal';
 import type { UserType } from '@/components/auth/auth-modal';
 import { Menu, Building, Stethoscope, ArrowRight, LayoutDashboard, LogOut, Loader2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationCenter } from '@/components/notification-center';
 import {
   Sheet,
   SheetContent,
@@ -115,6 +117,8 @@ export function Header() {
             ) : isLoggedIn ? (
               // Logged in - show dashboard button and user menu
               <>
+                <ThemeToggle />
+                <NotificationCenter userRole={userRole as 'employer' | 'professional' | 'superadmin'} />
                 <Button
                   variant="ghost"
                   onClick={() => router.push(getDashboardUrl())}
