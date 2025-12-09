@@ -67,12 +67,12 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
         try {
             setLoading(true);
             const apps = await getApplicationsByStint(stintId);
-            // Add mock extended data for demo
+            // Use real data from professional profile or application
             const enrichedApps = apps.map((app: any) => ({
                 ...app,
-                rating: 4.5 + Math.random() * 0.5,
-                completedStints: Math.floor(Math.random() * 50) + 5,
-                experience: Math.floor(Math.random() * 10) + 1
+                rating: app.professionalRating || app.averageRating || 4.5,
+                completedStints: app.completedStints || 0,
+                experience: app.yearsOfExperience || 1
             }));
             setApplications(enrichedApps);
         } catch (error) {

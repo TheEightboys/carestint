@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Clock, MoreVertical, Users, MapPin, DollarSign, Loader2, RefreshCw } from "lucide-react";
+import { Briefcase, Clock, MoreVertical, Users, MapPin, DollarSign, Loader2, RefreshCw, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { ApplicationsManager } from "./applications-manager";
 
 interface Stint {
     id: string;
@@ -28,15 +29,7 @@ interface Stint {
     offeredRate: number;
     status: string;
     shiftDate?: any;
-}
-
-interface Application {
-    id: string;
-    professionalName: string;
-    professionalRole: string;
-    isBid: boolean;
-    bidAmount?: number;
-    status: string;
+    acceptedProfessionalName?: string;
 }
 
 const getStatusClass = (status: string): string => {
@@ -64,8 +57,7 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
     const [stints, setStints] = useState<Stint[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedStint, setSelectedStint] = useState<Stint | null>(null);
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+    const [stintApplicationCounts, setStintApplicationCounts] = useState<Record<string, number>>({});
     const { toast } = useToast();
 
     const fetchStints = async () => {
@@ -73,6 +65,14 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
         try {
             const data = await getStintsByEmployer(employerId);
             setStints(data as Stint[]);
+
+            // Fetch application counts for each stint
+            const counts: Record<string, number> = {};
+            for (const stint of data as Stint[]) {
+                const apps = await getApplicationsByStint(stint.id);
+                counts[stint.id] = apps.filter((a: any) => a.status === 'pending').length;
+            }
+            setStintApplicationCounts(counts);
         } catch (error) {
             console.error("Error fetching stints:", error);
             toast({
@@ -85,25 +85,21 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
         }
     };
 
-    const fetchApplications = async (stintId: string) => {
-        setIsLoadingApplications(true);
-        try {
-            const data = await getApplicationsByStint(stintId);
-            setApplications(data as Application[]);
-        } catch (error) {
-            console.error("Error fetching applications:", error);
-        } finally {
-            setIsLoadingApplications(false);
-        }
-    };
-
     useEffect(() => {
         fetchStints();
     }, [employerId]);
 
-    const handleViewApplicants = async (stint: Stint) => {
+    const handleViewApplicants = (stint: Stint) => {
         setSelectedStint(stint);
-        await fetchApplications(stint.id);
+    };
+
+    const handleApplicationAccepted = () => {
+        setSelectedStint(null);
+        fetchStints(); // Refresh the list
+        toast({
+            title: "Professional Assigned",
+            description: "The stint has been updated successfully.",
+        });
     };
 
     const formatShiftDate = (shiftDate: any) => {
@@ -166,9 +162,22 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                     <span>KES {stint.offeredRate?.toLocaleString()}</span>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {formatShiftDate(stint.shiftDate)} • {stint.shiftType?.replace('-', ' ')}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatShiftDate(stint.shiftDate)} • {stint.shiftType?.replace('-', ' ')}
+                                                </p>
+                                                {stintApplicationCounts[stint.id] > 0 && (
+                                                    <Badge variant="default" className="text-xs bg-orange-500">
+                                                        <UserCheck className="h-3 w-3 mr-1" />
+                                                        {stintApplicationCounts[stint.id]} applicant{stintApplicationCounts[stint.id] > 1 ? 's' : ''}
+                                                    </Badge>
+                                                )}
+                                                {stint.acceptedProfessionalName && (
+                                                    <Badge variant="outline" className="text-xs border-green-500/30 text-green-600">
+                                                        Assigned: {stint.acceptedProfessionalName}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -180,6 +189,11 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                 <DropdownMenuItem onClick={() => handleViewApplicants(stint)}>
                                                     <Users className="mr-2 h-4 w-4" />
                                                     View Applicants
+                                                    {stintApplicationCounts[stint.id] > 0 && (
+                                                        <Badge className="ml-2 text-xs" variant="secondary">
+                                                            {stintApplicationCounts[stint.id]}
+                                                        </Badge>
+                                                    )}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="text-destructive">
                                                     Cancel Stint
@@ -199,55 +213,26 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                 </CardContent>
             </Card>
 
-            {/* Applicants Dialog */}
+            {/* Applications Dialog - Now using full ApplicationsManager */}
             <Dialog open={!!selectedStint} onOpenChange={() => setSelectedStint(null)}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Users className="h-5 w-5" />
-                            Applicants for {selectedStint?.role?.replace('-', ' ')}
+                            Manage Applicants - {selectedStint?.role?.replace('-', ' ')}
                         </DialogTitle>
                         <DialogDescription>
-                            Review and accept applicants for this stint.
+                            Review, accept, or reject applicants for this stint.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                        {isLoadingApplications ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : applications.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                                <p>No applicants yet</p>
-                                <p className="text-sm">Applications will appear here when professionals apply.</p>
-                            </div>
-                        ) : (
-                            applications.map((app) => (
-                                <Card key={app.id} className="bg-secondary/50">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="font-medium">{app.professionalName}</p>
-                                                <p className="text-sm text-muted-foreground capitalize">
-                                                    {app.professionalRole?.replace('-', ' ')}
-                                                </p>
-                                                {app.isBid && (
-                                                    <Badge variant="outline" className="mt-1 text-xs">
-                                                        Bid: KES {app.bidAmount?.toLocaleString()}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button size="sm" variant="outline">Decline</Button>
-                                                <Button size="sm">Accept</Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))
-                        )}
-                    </div>
+                    {selectedStint && (
+                        <ApplicationsManager
+                            stintId={selectedStint.id}
+                            stintRole={selectedStint.role}
+                            offeredRate={selectedStint.offeredRate}
+                            onApplicationAccepted={handleApplicationAccepted}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
         </>

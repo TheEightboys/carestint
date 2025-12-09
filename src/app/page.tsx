@@ -1,5 +1,6 @@
 import { Header } from '@/components/landing/header';
 import { Hero } from '@/components/landing/hero';
+import { MobileAppShowcase } from '@/components/landing/mobile-app-showcase';
 import { Features } from '@/components/landing/features';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { LiveStats } from '@/components/landing/live-stats';
@@ -17,6 +18,7 @@ export default function Home() {
       <Header />
       <main className="flex-1">
         <Hero />
+        <MobileAppShowcase />
         <Features />
         <HowItWorks />
         <LiveStats />

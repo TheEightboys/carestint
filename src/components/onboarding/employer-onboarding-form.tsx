@@ -18,13 +18,14 @@ import { addEmployer } from '@/lib/firebase/firestore';
 
 const formSchema = z.object({
   facilityName: z.string().min(2, "Facility name is required"),
+  facilityType: z.string().min(1, "Facility type is required"),
   contactPerson: z.string().min(2, "Contact person is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "A valid phone number is required"),
   city: z.string().min(2, "City is required"),
   operatingDays: z.string().min(1, "Operating days are required"),
   staffSize: z.string().min(1, "Staff size is required"),
-  licenseNumber: z.string().min(5, "A valid license number is required"),
+  licenseNumber: z.string().min(5, "A valid business license number is required"),
   licenseDocument: z.string().optional(),
   payoutMethod: z.string().min(1, "Payout method is required"),
   billingEmail: z.string().email("Invalid billing email address"),
@@ -33,8 +34,8 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const steps = [
-  { id: 1, title: 'Facility Details', fields: ['facilityName', 'contactPerson', 'email', 'phone', 'city', 'operatingDays', 'staffSize'] },
-  { id: 2, title: 'Facility License', fields: ['licenseNumber', 'licenseDocument'] },
+  { id: 1, title: 'Facility Details', fields: ['facilityName', 'facilityType', 'contactPerson', 'email', 'phone', 'city', 'operatingDays', 'staffSize'] },
+  { id: 2, title: 'Business License', fields: ['licenseNumber', 'licenseDocument'] },
   { id: 3, title: 'Billing & Payout', fields: ['payoutMethod', 'billingEmail'] },
   { id: 4, title: 'Review & Submit' },
 ];
@@ -61,6 +62,7 @@ export function EmployerOnboardingForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       facilityName: '',
+      facilityType: '',
       contactPerson: searchParams.get('name') || '',
       email: searchParams.get('email') || '',
       phone: searchParams.get('phone') || '',
@@ -122,7 +124,30 @@ export function EmployerOnboardingForm() {
           {currentStep === 1 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-in fade-in-50">
               <FormField name="facilityName" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Facility Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Facility Name</FormLabel><FormControl><Input placeholder="e.g., City Health Clinic" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField name="facilityType" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type of Facility</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select facility type" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="hospital">Hospital</SelectItem>
+                      <SelectItem value="clinic">Clinic</SelectItem>
+                      <SelectItem value="dental-clinic">Dental Clinic</SelectItem>
+                      <SelectItem value="nursing-home">Nursing Home</SelectItem>
+                      <SelectItem value="lab">Laboratory</SelectItem>
+                      <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                      <SelectItem value="maternity">Maternity Center</SelectItem>
+                      <SelectItem value="diagnostic">Diagnostic Center</SelectItem>
+                      <SelectItem value="rehab">Rehabilitation Center</SelectItem>
+                      <SelectItem value="hospice">Hospice</SelectItem>
+                      <SelectItem value="urgent-care">Urgent Care Center</SelectItem>
+                      <SelectItem value="other">Other Healthcare Facility</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField name="contactPerson" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -148,13 +173,13 @@ export function EmployerOnboardingForm() {
           {currentStep === 2 && (
             <div className="animate-in fade-in-50 space-y-4">
               <FormField name="licenseNumber" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Facility License Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Business License Number</FormLabel><FormControl><Input placeholder="Enter your facility's business license number" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField name="licenseDocument" control={form.control} render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Capture License Document</FormLabel>
+                  <FormLabel>Upload Business License Document</FormLabel>
                   <FormControl>
-                    <CameraCapture onCapture={(dataUrl) => field.onChange(dataUrl)} documentType="License" />
+                    <CameraCapture onCapture={(dataUrl) => field.onChange(dataUrl)} documentType="Business License" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

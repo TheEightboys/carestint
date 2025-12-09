@@ -85,7 +85,7 @@ export function Terms() {
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Rates</p>
-                  <p>Post an offered rate (KSh) for Half-day or Full-day. Allow bids if you want counter-offers.</p>
+                  <p>Post an offered rate for Half-day or Full-day. Allow bids if you want counter-offers.</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Cancellation</p>
@@ -93,7 +93,7 @@ export function Terms() {
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Permanent Hire</p>
-                  <p>35% of first month's salary success fee.</p>
+                  <p>Looking for a permanent hire? Contact us.</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-accent bg-accent/10 rounded-lg p-2">
@@ -162,9 +162,7 @@ export function Terms() {
 
               <p>Basic profile and booking information may be stored to operate the service and improve matching. In a real deployment, this would be governed by a full Privacy Policy and Data Protection addendum specific to the region.</p>
 
-              <div className="rounded-lg bg-muted p-3 text-xs">
-                <p className="italic">This page is placeholder copy for demo and design purposes only and does not constitute legal advice or a binding set of terms.</p>
-              </div>
+
             </div>
           </AccordionContent>
         </AccordionItem>

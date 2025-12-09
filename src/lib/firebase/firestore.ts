@@ -647,6 +647,40 @@ export const withdrawApplication = async (applicationId: string) => {
     }
 }
 
+// Get all applications for an employer's stints
+export const getApplicationsForEmployer = async (employerId: string) => {
+    const firestore = getDb();
+    try {
+        // First get all stints for this employer
+        const stintsQuery = query(collection(firestore, 'stints'), where('employerId', '==', employerId));
+        const stintsSnapshot = await getDocs(stintsQuery);
+        const stintIds = stintsSnapshot.docs.map(doc => doc.id);
+
+        if (stintIds.length === 0) return [];
+
+        // Get all applications for these stints
+        const allApplications: any[] = [];
+        for (const stintId of stintIds) {
+            const appsQuery = query(collection(firestore, 'stintApplications'), where('stintId', '==', stintId));
+            const appsSnapshot = await getDocs(appsQuery);
+            appsSnapshot.docs.forEach(doc => {
+                allApplications.push({ id: doc.id, ...doc.data() });
+            });
+        }
+
+        return allApplications;
+    } catch (error) {
+        console.error("Error getting applications for employer:", error);
+        return [];
+    }
+}
+
+// Get pending applications count for an employer
+export const getPendingApplicationsCount = async (employerId: string) => {
+    const applications = await getApplicationsForEmployer(employerId);
+    return applications.filter((app: any) => app.status === 'pending').length;
+}
+
 // =============================================
 // DISPUTE SERVICES
 // =============================================
@@ -882,10 +916,37 @@ export const addAuditLog = async (logData: {
 }) => {
     const firestore = getDb();
     try {
-        const docRef = await addDoc(collection(firestore, 'auditLogs'), {
-            ...logData,
+        // Filter out undefined values to prevent Firestore errors
+        const cleanData: Record<string, any> = {
+            actorType: logData.actorType,
+            entityType: logData.entityType,
+            entityId: logData.entityId,
+            action: logData.action,
+            description: logData.description,
             timestamp: serverTimestamp(),
-        });
+        };
+
+        // Only add optional fields if they have values
+        if (logData.actorId !== undefined && logData.actorId !== null) {
+            cleanData.actorId = logData.actorId;
+        } else {
+            // Default actorId for system actions
+            cleanData.actorId = logData.actorType === 'system' ? 'system' : 'unknown';
+        }
+        if (logData.actorName !== undefined && logData.actorName !== null) {
+            cleanData.actorName = logData.actorName;
+        }
+        if (logData.previousValue !== undefined && logData.previousValue !== null) {
+            cleanData.previousValue = logData.previousValue;
+        }
+        if (logData.newValue !== undefined && logData.newValue !== null) {
+            cleanData.newValue = logData.newValue;
+        }
+        if (logData.metadata !== undefined && logData.metadata !== null) {
+            cleanData.metadata = logData.metadata;
+        }
+
+        const docRef = await addDoc(collection(firestore, 'auditLogs'), cleanData);
         return docRef.id;
     } catch (error) {
         console.error("Error adding audit log:", error);

@@ -4,7 +4,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Rocket, Target, Zap, ShieldCheck, Smartphone, Globe, Clock, CheckCircle2 } from 'lucide-react';
-import { WaitlistModal } from './waitlist-modal';
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -213,70 +212,6 @@ export function Features() {
                 <div className="text-xs text-muted-foreground">{stat.sublabel}</div>
               </div>
             ))}
-          </div>
-
-          {/* Mobile App Showcase Section */}
-          <div className="mt-24 text-center">
-            <h3 className="font-headline text-2xl md:text-3xl font-bold mb-4">
-              <span className="gradient-text">iOS & Android</span> Coming Soon
-            </h3>
-            <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-              Take CareStint with you. Find and manage stints, clock in/out, and get paid — all from your phone.
-            </p>
-
-            {/* Phone Mockups */}
-            <div className="flex justify-center items-end gap-6 mb-8">
-              {/* iPhone Mockup - CareStint Pro */}
-              <div className="relative w-44 h-[22rem] sm:w-52 sm:h-[26rem] rounded-[2.5rem] bg-gradient-to-br from-slate-800 to-slate-900 p-2 shadow-2xl transform -rotate-6 hover:rotate-0 transition-transform duration-500 border border-slate-700">
-                {/* iPhone Notch */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-5 bg-slate-900 rounded-full z-20" />
-                {/* Side buttons */}
-                <div className="absolute -left-1 top-24 w-1 h-8 bg-slate-700 rounded-l-sm" />
-                <div className="absolute -left-1 top-36 w-1 h-12 bg-slate-700 rounded-l-sm" />
-                <div className="absolute -right-1 top-28 w-1 h-10 bg-slate-700 rounded-r-sm" />
-                {/* Screen */}
-                <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
-                  <img
-                    src="/images/pro-app-screen.png"
-                    alt="CareStint Pro App"
-                    className="w-full h-full object-cover object-top"
-                  />
-                  {/* Label overlay at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-4 pt-8">
-                    <div className="text-sm font-semibold text-white">CareStint Pro</div>
-                    <div className="text-[11px] text-slate-300">For Professionals</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Android Mockup - CareStint Hire */}
-              <div className="relative w-44 h-[22rem] sm:w-52 sm:h-[26rem] rounded-[2rem] bg-gradient-to-br from-slate-800 to-slate-900 p-2 shadow-2xl transform rotate-6 hover:rotate-0 transition-transform duration-500 border border-slate-700">
-                {/* Android Camera Dot */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-slate-600 rounded-full z-20 ring-1 ring-slate-500" />
-                {/* Volume buttons */}
-                <div className="absolute -right-1 top-20 w-1 h-8 bg-slate-700 rounded-r-sm" />
-                <div className="absolute -right-1 top-32 w-1 h-8 bg-slate-700 rounded-r-sm" />
-                {/* Screen */}
-                <div className="w-full h-full rounded-[1.5rem] overflow-hidden relative">
-                  <img
-                    src="/images/hire-app-screen.png"
-                    alt="CareStint Hire App"
-                    className="w-full h-full object-cover object-top"
-                  />
-                  {/* Label overlay at bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-4 pt-8">
-                    <div className="text-sm font-semibold text-white">CareStint Hire</div>
-                    <div className="text-[11px] text-slate-300">For Employers</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Join Waitlist Button */}
-            <WaitlistModal />
-            <p className="text-xs text-muted-foreground mt-4">
-              Be the first to know when our mobile apps launch
-            </p>
           </div>
         </div>
       </div>

@@ -14,6 +14,15 @@ import {
   Settings,
   ClipboardList,
   Loader2,
+  TrendingUp,
+  Wallet,
+  AlertOctagon,
+  RefreshCw,
+  Target,
+  Zap,
+  Copy,
+  CheckCircle2,
+  BarChart3,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -36,6 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 
 import { GrossVolumeChart } from "@/components/dashboard/superadmin/gross-volume-chart"
 import {
@@ -45,6 +55,9 @@ import {
   getOpenDisputes,
   getRecentAuditLogs,
 } from "@/lib/firebase/firestore"
+import { getRiskDistribution, recalculateAllRiskScores } from "@/lib/risk-scoring"
+import { getSettlementStats, processReadySettlements } from "@/lib/settlement-engine"
+import { detectDuplicates, getDuplicateStats } from "@/lib/duplicate-detection"
 
 export default function SuperAdminDashboardPage() {
   const [newProfessionals, setNewProfessionals] = useState<any[]>([]);
@@ -63,21 +76,46 @@ export default function SuperAdminDashboardPage() {
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // NEW: Enhanced stats
+  const [riskDistribution, setRiskDistribution] = useState({
+    employers: { low: 0, medium: 0, high: 0 },
+    professionals: { low: 0, medium: 0, high: 0 },
+  });
+  const [settlementStats, setSettlementStats] = useState({
+    pendingPayouts: 0,
+    completedPayouts: 0,
+    totalPaidOut: 0,
+    totalRevenue: 0,
+    pendingInvoices: 0,
+  });
+  const [duplicateStats, setDuplicateStats] = useState({
+    pendingAlerts: 0,
+    resolvedAlerts: 0,
+    totalDuplicateAccounts: 0,
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [professionals, employers, statsData, disputes, logs] = await Promise.all([
+        const [professionals, employers, statsData, disputes, logs, riskData, settleData, dupData] = await Promise.all([
           getPendingProfessionals(),
           getPendingEmployers(),
           getDashboardStats(),
           getOpenDisputes(),
           getRecentAuditLogs(10),
+          getRiskDistribution(),
+          getSettlementStats(),
+          getDuplicateStats(),
         ]);
         setNewProfessionals(professionals);
         setNewEmployers(employers);
         setStats(statsData);
         setOpenDisputes(disputes);
         setRecentLogs(logs);
+        setRiskDistribution(riskData);
+        setSettlementStats(settleData);
+        setDuplicateStats(dupData);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -109,24 +147,29 @@ export default function SuperAdminDashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="employers" asChild>
-              <Link href="/dashboard/superadmin/employers">Employers</Link>
-            </TabsTrigger>
-            <TabsTrigger value="professionals" asChild>
-              <Link href="/dashboard/superadmin/professionals">Professionals</Link>
-            </TabsTrigger>
-            <TabsTrigger value="stints" asChild>
-              <Link href="/dashboard/superadmin/stints">Stints</Link>
-            </TabsTrigger>
-            <TabsTrigger value="finance" asChild>
-              <Link href="/dashboard/superadmin/finance">Finance</Link>
-            </TabsTrigger>
-            <TabsTrigger value="audit" asChild>
-              <Link href="/dashboard/superadmin/audit">Audit</Link>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:grid-cols-7 md:w-full">
+              <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
+              <TabsTrigger value="employers" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/employers">Employers</Link>
+              </TabsTrigger>
+              <TabsTrigger value="professionals" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/professionals">Professionals</Link>
+              </TabsTrigger>
+              <TabsTrigger value="stints" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/stints">Stints</Link>
+              </TabsTrigger>
+              <TabsTrigger value="finance" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/finance">Finance</Link>
+              </TabsTrigger>
+              <TabsTrigger value="promotions" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/promotions">Promotions</Link>
+              </TabsTrigger>
+              <TabsTrigger value="audit" asChild className="whitespace-nowrap">
+                <Link href="/dashboard/superadmin/audit">Audit</Link>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-4">
             {/* Stats Cards */}
@@ -181,6 +224,103 @@ export default function SuperAdminDashboardPage() {
                   <p className="text-xs text-muted-foreground">
                     {stats.disputedStints > 0 ? `${stats.disputedStints} in dispute` : 'No disputes'}
                   </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Enhanced Stats Row */}
+            <div className="grid gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+              {/* Risk Overview Card */}
+              <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Risk Overview</CardTitle>
+                  <AlertOctagon className="h-4 w-4 text-orange-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">High Risk</span>
+                      <Badge variant="destructive" className="text-xs">
+                        {riskDistribution.employers.high + riskDistribution.professionals.high}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Medium Risk</span>
+                      <Badge variant="secondary" className="text-xs bg-yellow-500/20 text-yellow-600">
+                        {riskDistribution.employers.medium + riskDistribution.professionals.medium}
+                      </Badge>
+                    </div>
+                    <Progress
+                      value={((riskDistribution.employers.high + riskDistribution.professionals.high) / Math.max(stats.totalEmployers + stats.totalProfessionals, 1)) * 100}
+                      className="h-1.5 mt-2"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Settlement Stats Card */}
+              <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 to-transparent">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Settlements</CardTitle>
+                  <Wallet className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    KES {settlementStats.totalPaidOut.toLocaleString()}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {settlementStats.pendingPayouts} pending
+                    </Badge>
+                    <Badge variant="outline" className="text-xs text-green-600 border-green-500/30">
+                      {settlementStats.completedPayouts} done
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Duplicate Alerts Card */}
+              <Card className={`${duplicateStats.pendingAlerts > 0 ? 'border-red-500/30 bg-gradient-to-br from-red-500/5 to-transparent' : ''}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Duplicate Alerts</CardTitle>
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {duplicateStats.pendingAlerts}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {duplicateStats.totalDuplicateAccounts} accounts flagged
+                  </p>
+                  {duplicateStats.pendingAlerts > 0 && (
+                    <Badge variant="destructive" className="mt-2 text-xs">
+                      Needs Review
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Automation Status Card */}
+              <Card className="border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Automation</CardTitle>
+                  <Zap className="h-4 w-4 text-accent" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span>Risk Scoring Active</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span>Settlement Engine Ready</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span>Duplicate Detection On</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

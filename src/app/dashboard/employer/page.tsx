@@ -20,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getEmployerByEmail, getStintsByEmployer } from "@/lib/firebase/firestore";
+import { getEmployerByEmail, getStintsByEmployer, getPendingApplicationsCount } from "@/lib/firebase/firestore";
 import { useUser } from "@/lib/user-context";
 import { auth } from "@/lib/firebase/clientApp";
 import { signOut } from "firebase/auth";
@@ -68,13 +68,17 @@ export default function EmployerDashboardPage() {
 
                 setEmployer(employerData);
 
-                // Load stats
-                const stints = await getStintsByEmployer(employerData.id);
+                // Load stats including pending applications count
+                const [stints, pendingAppsCount] = await Promise.all([
+                    getStintsByEmployer(employerData.id),
+                    getPendingApplicationsCount(employerData.id),
+                ]);
+
                 setStats({
                     totalStints: stints.length,
                     activeStints: stints.filter((s: any) => ['open', 'accepted', 'in_progress'].includes(s.status)).length,
                     completedStints: stints.filter((s: any) => s.status === 'completed').length,
-                    pendingApplications: 0, // Would be loaded from applications
+                    pendingApplications: pendingAppsCount,
                 });
             } catch (error) {
                 console.error('Error loading employer data:', error);

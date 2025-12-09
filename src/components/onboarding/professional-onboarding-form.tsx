@@ -165,14 +165,23 @@ export function ProfessionalOnboardingForm() {
           {currentStep === 3 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-in fade-in-50">
               <FormField name="primaryRole" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Primary Role</FormLabel>
+                <FormItem><FormLabel>Type of Professional</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select your profession" /></SelectTrigger></FormControl>
                     <SelectContent>
+                      <SelectItem value="doctor">Doctor / Physician</SelectItem>
                       <SelectItem value="dentist">Dentist</SelectItem>
                       <SelectItem value="rn">Registered Nurse (RN)</SelectItem>
+                      <SelectItem value="enrolled-nurse">Enrolled Nurse</SelectItem>
                       <SelectItem value="clinical-officer">Clinical Officer</SelectItem>
                       <SelectItem value="lab-tech">Lab Technician</SelectItem>
+                      <SelectItem value="pharmacist">Pharmacist</SelectItem>
+                      <SelectItem value="pharm-tech">Pharmacy Technician</SelectItem>
+                      <SelectItem value="radiographer">Radiographer</SelectItem>
+                      <SelectItem value="physiotherapist">Physiotherapist</SelectItem>
+                      <SelectItem value="midwife">Midwife</SelectItem>
+                      <SelectItem value="nutritionist">Nutritionist / Dietitian</SelectItem>
+                      <SelectItem value="other">Other Healthcare Professional</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage /></FormItem>)} />

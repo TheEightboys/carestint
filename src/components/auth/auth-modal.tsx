@@ -19,6 +19,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 
@@ -63,9 +64,14 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
         await updateProfile(userCredential.user, { displayName: fullName });
       }
 
+      // Send email verification
+      if (userCredential.user) {
+        await sendEmailVerification(userCredential.user);
+      }
+
       toast({
         title: 'Account created!',
-        description: 'Redirecting to complete your profile...',
+        description: 'A verification email has been sent. Please verify your email, then complete your profile.',
       });
 
       const redirectUrl = `/onboarding/${userType}?email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}`;

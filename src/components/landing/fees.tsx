@@ -160,11 +160,8 @@ export function Fees() {
                                 <div className="flex items-start gap-4 p-4 rounded-lg bg-secondary/50 border border-border/50">
                                     <div className="text-3xl">🤝</div>
                                     <div className="flex-1">
-                                        <div className="flex items-baseline justify-between">
-                                            <h4 className="font-semibold">Permanent Hire</h4>
-                                            <span className="text-2xl font-bold gradient-text">35%</span>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">Of first month's salary (success fee)</p>
+                                        <h4 className="font-semibold">Permanent Hire</h4>
+                                        <p className="text-sm text-muted-foreground">Looking for a permanent hire? Contact us.</p>
                                     </div>
                                 </div>
                             </div>

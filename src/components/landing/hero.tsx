@@ -203,25 +203,27 @@ export function Hero() {
                   <span className="font-medium">Trusted by 300+ clinics</span>
                 </div>
               </div>
-
-              {/* Stats row */}
-              <div className="flex flex-wrap gap-8 pt-4">
-                <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">700+</div>
-                  <div className="text-sm text-muted-foreground">Verified Professionals</div>
-                </div>
-                <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">100+</div>
-                  <div className="text-sm text-muted-foreground">Partner Facilities</div>
-                </div>
-                <div className="hero-subline">
-                  <div className="text-3xl font-bold font-headline gradient-text">4,500+</div>
-                  <div className="text-sm text-muted-foreground">Stints Completed</div>
-                </div>
-              </div>
             </div>
 
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex flex-col gap-6">
+              {/* Promotional Banner - Above cards */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-accent via-primary to-accent p-[2px] shadow-xl shadow-accent/20">
+                <div className="rounded-2xl bg-background/95 backdrop-blur-sm px-4 py-3 sm:px-6 sm:py-4">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xl animate-bounce">
+                      🎉
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Limited Time Offer</p>
+                      <p className="text-sm sm:text-base font-bold gradient-text">
+                        Employers, Get KSh 1,000 Off Your First Posted Shift!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Demo Cards Grid */}
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
 
                 {/* Employer Card with glassmorphism */}
