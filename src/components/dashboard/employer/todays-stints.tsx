@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Clock, MoreVertical, Users, MapPin, DollarSign, Loader2, RefreshCw, UserCheck } from "lucide-react";
+import { Briefcase, Clock, MoreVertical, Users, MapPin, DollarSign, Loader2, RefreshCw, UserCheck, LogIn, LogOut, Timer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,14 @@ interface Stint {
     endTime: string;
     city: string;
     offeredRate: number;
+    currency?: string;
     status: string;
     shiftDate?: any;
     acceptedProfessionalName?: string;
+    clockInTime?: any;
+    clockOutTime?: any;
+    completedAt?: any;
+    disputeWindowEndsAt?: any;
 }
 
 const getStatusClass = (status: string): string => {
@@ -108,6 +113,21 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
         return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     };
 
+    const formatTime = (timestamp: any) => {
+        if (!timestamp) return null;
+        const date = timestamp.toDate?.() || new Date(timestamp);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const getDisputeWindowRemaining = (disputeWindowEndsAt: any) => {
+        if (!disputeWindowEndsAt) return null;
+        const endDate = disputeWindowEndsAt.toDate?.() || new Date(disputeWindowEndsAt);
+        const now = new Date();
+        const hoursRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60)));
+        if (hoursRemaining <= 0) return "Ready for payout";
+        return `${hoursRemaining}h until payout`;
+    };
+
     return (
         <>
             <Card>
@@ -159,9 +179,40 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                 </div>
                                                 <div className="flex items-center gap-1">
                                                     <DollarSign className="h-3 w-3" />
-                                                    <span>KES {stint.offeredRate?.toLocaleString()}</span>
+                                                    <span>{stint.currency || 'KES'} {stint.offeredRate?.toLocaleString()}</span>
                                                 </div>
                                             </div>
+                                            {/* Clock In/Out Times */}
+                                            {(stint.clockInTime || stint.clockOutTime) && (
+                                                <div className="flex flex-wrap items-center gap-3 text-xs mt-1 py-2 px-3 rounded-lg bg-primary/5 border border-primary/10">
+                                                    {stint.clockInTime && (
+                                                        <div className="flex items-center gap-1.5 text-green-600">
+                                                            <LogIn className="h-3 w-3" />
+                                                            <span className="font-medium">Clocked In:</span>
+                                                            <span>{formatTime(stint.clockInTime)}</span>
+                                                        </div>
+                                                    )}
+                                                    {stint.clockOutTime && (
+                                                        <div className="flex items-center gap-1.5 text-blue-600">
+                                                            <LogOut className="h-3 w-3" />
+                                                            <span className="font-medium">Clocked Out:</span>
+                                                            <span>{formatTime(stint.clockOutTime)}</span>
+                                                        </div>
+                                                    )}
+                                                    {stint.status === 'completed' && stint.disputeWindowEndsAt && (
+                                                        <div className="flex items-center gap-1.5 text-orange-600">
+                                                            <Timer className="h-3 w-3" />
+                                                            <span className="font-medium">{getDisputeWindowRemaining(stint.disputeWindowEndsAt)}</span>
+                                                        </div>
+                                                    )}
+                                                    {stint.status === 'settled' && (
+                                                        <div className="flex items-center gap-1.5 text-emerald-600">
+                                                            <CheckCircle2 className="h-3 w-3" />
+                                                            <span className="font-medium">Payment Released</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-2">
                                                 <p className="text-xs text-muted-foreground">
                                                     {formatShiftDate(stint.shiftDate)} • {stint.shiftType?.replace('-', ' ')}

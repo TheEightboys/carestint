@@ -10,6 +10,7 @@ import type { UserType } from '@/components/auth/auth-modal';
 import { Menu, Building, Stethoscope, ArrowRight, LayoutDashboard, LogOut, Loader2, ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationCenter } from '@/components/notification-center';
+import { RoleSwitcher } from '@/components/role-switcher';
 import {
   Sheet,
   SheetContent,
@@ -119,6 +120,7 @@ export function Header() {
               <>
                 <ThemeToggle />
                 <NotificationCenter userRole={userRole as 'employer' | 'professional' | 'superadmin'} />
+                <RoleSwitcher variant="header" />
                 <Button
                   variant="ghost"
                   onClick={() => router.push(getDashboardUrl())}

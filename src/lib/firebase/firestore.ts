@@ -1,8 +1,8 @@
 'use client';
 
-import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, updateDoc, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, updateDoc, orderBy, limit, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from './clientApp';
-import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType } from '@/lib/types';
+import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType, ActiveRole, UserAccount, DualRoleInfo, EmployerStatus, ProfessionalStatus } from '@/lib/types';
 
 // Helper function to get the Firestore instance
 const getDb = () => {
@@ -11,6 +11,186 @@ const getDb = () => {
     }
     return db;
 }
+
+// =============================================
+// USER ACCOUNT SERVICES (Dual Role System)
+// =============================================
+
+// Create or update user account record
+export const createOrUpdateUserAccount = async (userData: {
+    uid: string;
+    email: string;
+    phone?: string;
+    employerId?: string;
+    professionalId?: string;
+    activeRole: ActiveRole;
+}) => {
+    const firestore = getDb();
+    try {
+        const userRef = doc(firestore, 'users', userData.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+            // Update existing user
+            const updates: any = {
+                updatedAt: serverTimestamp(),
+            };
+            if (userData.employerId) updates.employerId = userData.employerId;
+            if (userData.professionalId) updates.professionalId = userData.professionalId;
+            if (userData.activeRole) updates.activeRole = userData.activeRole;
+            if (userData.phone) updates.phone = userData.phone;
+
+            await updateDoc(userRef, updates);
+        } else {
+            // Create new user
+            await setDoc(userRef, {
+                id: userData.uid,
+                email: userData.email,
+                phone: userData.phone || '',
+                employerId: userData.employerId || null,
+                professionalId: userData.professionalId || null,
+                activeRole: userData.activeRole,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+        }
+        return true;
+    } catch (error) {
+        console.error('Error creating/updating user account:', error);
+        throw error;
+    }
+};
+
+// Get user account by Firebase UID
+export const getUserAccountByUid = async (uid: string): Promise<UserAccount | null> => {
+    const firestore = getDb();
+    try {
+        const userRef = doc(firestore, 'users', uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            return { id: userSnap.id, ...userSnap.data() } as UserAccount;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting user account:', error);
+        return null;
+    }
+};
+
+// Get user account by email
+export const getUserAccountByEmail = async (email: string): Promise<UserAccount | null> => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'users'), where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const docData = querySnapshot.docs[0];
+            return { id: docData.id, ...docData.data() } as UserAccount;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error getting user account by email:', error);
+        return null;
+    }
+};
+
+// Switch active role
+export const switchActiveRole = async (uid: string, newRole: ActiveRole): Promise<boolean> => {
+    const firestore = getDb();
+    try {
+        const userRef = doc(firestore, 'users', uid);
+        await updateDoc(userRef, {
+            activeRole: newRole,
+            updatedAt: serverTimestamp(),
+        });
+        return true;
+    } catch (error) {
+        console.error('Error switching active role:', error);
+        return false;
+    }
+};
+
+// Link a new role to existing user
+export const linkRoleToUser = async (uid: string, roleType: 'employer' | 'professional', roleId: string): Promise<boolean> => {
+    const firestore = getDb();
+    try {
+        const userRef = doc(firestore, 'users', uid);
+        const updates: any = {
+            updatedAt: serverTimestamp(),
+        };
+        if (roleType === 'employer') {
+            updates.employerId = roleId;
+        } else {
+            updates.professionalId = roleId;
+        }
+        await updateDoc(userRef, updates);
+        return true;
+    } catch (error) {
+        console.error('Error linking role to user:', error);
+        return false;
+    }
+};
+
+// Get dual role info for a user
+export const getDualRoleInfo = async (uid: string): Promise<DualRoleInfo | null> => {
+    const firestore = getDb();
+    try {
+        const userAccount = await getUserAccountByUid(uid);
+        if (!userAccount) return null;
+
+        let employerStatus: EmployerStatus | undefined;
+        let professionalStatus: ProfessionalStatus | undefined;
+
+        // Fetch employer status if exists
+        if (userAccount.employerId) {
+            const employer = await getEmployerById(userAccount.employerId) as any;
+            employerStatus = employer?.status as EmployerStatus;
+        }
+
+        // Fetch professional status if exists
+        if (userAccount.professionalId) {
+            const professional = await getProfessionalById(userAccount.professionalId) as any;
+            professionalStatus = professional?.status as ProfessionalStatus;
+        }
+
+        return {
+            hasEmployerRole: !!userAccount.employerId,
+            hasProfessionalRole: !!userAccount.professionalId,
+            employerId: userAccount.employerId,
+            professionalId: userAccount.professionalId,
+            employerStatus,
+            professionalStatus,
+            activeRole: userAccount.activeRole,
+        };
+    } catch (error) {
+        console.error('Error getting dual role info:', error);
+        return null;
+    }
+};
+
+// Check for conflict of interest (misuse prevention)
+export const checkConflictOfInterest = async (professionalId: string, employerId: string): Promise<boolean> => {
+    const firestore = getDb();
+    try {
+        // Check if professional and employer belong to the same user account
+        const usersQuery = query(
+            collection(firestore, 'users'),
+            where('professionalId', '==', professionalId)
+        );
+        const querySnapshot = await getDocs(usersQuery);
+
+        if (!querySnapshot.empty) {
+            const userAccount = querySnapshot.docs[0].data();
+            if (userAccount.employerId === employerId) {
+                return true; // Conflict detected - same user has both roles
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error('Error checking conflict of interest:', error);
+        return false;
+    }
+};
 
 // =============================================
 // EMPLOYER SERVICES
@@ -116,15 +296,23 @@ export const getEmployerByEmail = async (email: string) => {
     }
 }
 
-export const updateEmployerStatus = async (id: string, status: string, actorId?: string) => {
+export const updateEmployerStatus = async (id: string, status: string, additionalData?: any) => {
     const firestore = getDb();
     try {
         const docRef = doc(firestore, 'employers', id);
         const updates: any = { status, updatedAt: serverTimestamp() };
         if (status === 'active') {
             updates.approvedAt = serverTimestamp();
+            // Clear suspension fields when reactivating
+            updates.suspensionDays = null;
+            updates.suspensionEndDate = null;
+            updates.suspensionReason = null;
         } else if (status === 'suspended') {
             updates.suspendedAt = serverTimestamp();
+        }
+        // Merge additional data if provided
+        if (additionalData) {
+            Object.assign(updates, additionalData);
         }
         await updateDoc(docRef, updates);
 
@@ -134,10 +322,11 @@ export const updateEmployerStatus = async (id: string, status: string, actorId?:
             'rejected': 'EMPLOYER_REJECTED',
             'suspended': 'EMPLOYER_SUSPENDED',
         };
+        const auditActorId = additionalData?.actorId as string | undefined;
         if (actionMap[status]) {
             await addAuditLog({
-                actorType: actorId ? 'superadmin' : 'system',
-                actorId,
+                actorType: auditActorId ? 'superadmin' : 'system',
+                actorId: auditActorId,
                 entityType: 'employer',
                 entityId: id,
                 action: actionMap[status],
@@ -271,15 +460,23 @@ export const getProfessionalByEmail = async (email: string) => {
     }
 }
 
-export const updateProfessionalStatus = async (id: string, status: string, actorId?: string) => {
+export const updateProfessionalStatus = async (id: string, status: string, additionalData?: any) => {
     const firestore = getDb();
     try {
         const docRef = doc(firestore, 'professionals', id);
         const updates: any = { status, updatedAt: serverTimestamp() };
         if (status === 'active') {
             updates.approvedAt = serverTimestamp();
+            // Clear suspension fields when reactivating
+            updates.suspensionDays = null;
+            updates.suspensionEndDate = null;
+            updates.suspensionReason = null;
         } else if (status === 'suspended') {
             updates.suspendedAt = serverTimestamp();
+        }
+        // Merge additional data if provided
+        if (additionalData) {
+            Object.assign(updates, additionalData);
         }
         await updateDoc(docRef, updates);
 
@@ -288,10 +485,11 @@ export const updateProfessionalStatus = async (id: string, status: string, actor
             'rejected': 'PROFESSIONAL_REJECTED',
             'suspended': 'PROFESSIONAL_SUSPENDED',
         };
+        const auditActorId = additionalData?.actorId as string | undefined;
         if (actionMap[status]) {
             await addAuditLog({
-                actorType: actorId ? 'superadmin' : 'system',
-                actorId,
+                actorType: auditActorId ? 'superadmin' : 'system',
+                actorId: auditActorId,
                 entityType: 'professional',
                 entityId: id,
                 action: actionMap[status],
@@ -541,6 +739,16 @@ export const addStintApplication = async (applicationData: {
 }) => {
     const firestore = getDb();
     try {
+        // MISUSE PREVENTION: Check for conflict of interest
+        // Get the stint to find the employer
+        const stint = await getStintById(applicationData.stintId) as any;
+        if (stint) {
+            const hasConflict = await checkConflictOfInterest(applicationData.professionalId, stint.employerId);
+            if (hasConflict) {
+                throw new Error('CONFLICT_OF_INTEREST: You cannot apply to stints posted by your own employer account. Please switch to employer mode to manage this stint.');
+            }
+        }
+
         // Filter out undefined values to avoid Firestore errors
         const cleanData: Record<string, any> = {
             stintId: applicationData.stintId,

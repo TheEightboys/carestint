@@ -84,6 +84,51 @@ service cloud.firestore {
     match /waitlist/{entryId} {
       allow read, write: if true;
     }
+
+    // ===== USERS (for dual role system) =====
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // ===== PLATFORM CONFIG =====
+    match /platformConfig/{configId} {
+      allow read, write: if true;
+    }
+
+    // ===== SETTLEMENTS =====
+    match /settlements/{settlementId} {
+      allow read, write: if true;
+    }
+
+    // ===== DUPLICATE ALERTS =====
+    match /duplicateAlerts/{alertId} {
+      allow read, write: if true;
+    }
+
+    // ===== AUTOMATION SETTINGS =====
+    match /automationSettings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // ===== MODULE REQUESTS =====
+    match /moduleRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // ===== CHAT CONVERSATIONS =====
+    match /conversations/{conversationId} {
+      allow read, write: if true;
+    }
+
+    // ===== CHAT MESSAGES =====
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // ===== CATCH-ALL for any other collections during development =====
+    match /{document=**} {
+      allow read, write: if true;
+    }
   }
 }
 

@@ -28,6 +28,7 @@ const formSchema = z.object({
   primaryRole: z.string().min(1, "Primary role is required"),
   experience: z.string().min(1, "Years of experience is required"),
   dailyRate: z.string().min(1, "Typical daily rate is required"),
+  currency: z.string().default("KSh"),
   shiftTypes: z.string().min(1, "Available shift types are required"),
   mpesaPhone: z.string().min(10, "A valid M-Pesa phone number is required"),
   bankAccount: z.string().optional(),
@@ -75,6 +76,7 @@ export function ProfessionalOnboardingForm() {
       primaryRole: '',
       experience: '',
       dailyRate: '',
+      currency: 'KSh',
       shiftTypes: '',
       mpesaPhone: searchParams.get('phone') || '',
       bankAccount: '',
@@ -186,7 +188,18 @@ export function ProfessionalOnboardingForm() {
                   </Select>
                   <FormMessage /></FormItem>)} />
               <FormField name="experience" control={form.control} render={({ field }) => (<FormItem><FormLabel>Years of Experience</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField name="dailyRate" control={form.control} render={({ field }) => (<FormItem><FormLabel>Typical Daily Rate (KSh)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField name="dailyRate" control={form.control} render={({ field }) => (<FormItem><FormLabel>Typical Daily Rate</FormLabel><FormControl><Input type="number" placeholder="e.g., 5000" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField name="currency" control={form.control} render={({ field }) => (
+                <FormItem><FormLabel>Currency</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select currency" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="KSh">🇰🇪 KSh (Kenya)</SelectItem>
+                      <SelectItem value="UGX">🇺🇬 UGX (Uganda)</SelectItem>
+                      <SelectItem value="TZS">🇹🇿 TZS (Tanzania)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage /></FormItem>)} />
               <FormField name="shiftTypes" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Available Shift Types</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>

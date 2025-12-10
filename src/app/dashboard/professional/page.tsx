@@ -2,7 +2,8 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar, Settings } from "lucide-react";
+import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar, Settings, Calculator, MessageCircle, Home } from "lucide-react";
+import { RoleSwitcher } from "@/components/role-switcher";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AvailableStints } from "@/components/dashboard/professional/available-stints";
@@ -11,6 +12,8 @@ import { ProfessionalProfile } from "@/components/dashboard/professional/profess
 import { ActiveStint } from "@/components/dashboard/professional/active-stint";
 import { EarningsHistory } from "@/components/dashboard/professional/earnings-history";
 import { AvailabilityCalendar } from "@/components/dashboard/professional/availability-calendar";
+import { ProfessionalFeeCalculator } from "@/components/dashboard/professional/professional-fee-calculator";
+import { Chat } from "@/components/chat/chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -135,6 +138,10 @@ export default function ProfessionalDashboardPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
+                <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                    <Home className="h-5 w-5" />
+                    <span className="hidden sm:inline text-sm">Home</span>
+                </Link>
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
                         <Stethoscope className="h-5 w-5 text-accent" />
@@ -156,6 +163,7 @@ export default function ProfessionalDashboardPage() {
                     </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <RoleSwitcher variant="compact" />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -245,7 +253,7 @@ export default function ProfessionalDashboardPage() {
 
                 <Tabs defaultValue="active-stint">
                     <div className="flex items-center overflow-x-auto">
-                        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
+                        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
                             <TabsTrigger value="active-stint">
                                 <Timer className="mr-2 h-4 w-4 hidden sm:block" />
                                 Active
@@ -258,6 +266,10 @@ export default function ProfessionalDashboardPage() {
                                 <FileText className="mr-2 h-4 w-4 hidden sm:block" />
                                 Applied
                             </TabsTrigger>
+                            <TabsTrigger value="calculator">
+                                <Calculator className="mr-2 h-4 w-4 hidden sm:block" />
+                                Calculator
+                            </TabsTrigger>
                             <TabsTrigger value="earnings">
                                 <Wallet className="mr-2 h-4 w-4 hidden sm:block" />
                                 Earnings
@@ -265,6 +277,10 @@ export default function ProfessionalDashboardPage() {
                             <TabsTrigger value="availability">
                                 <Calendar className="mr-2 h-4 w-4 hidden sm:block" />
                                 Availability
+                            </TabsTrigger>
+                            <TabsTrigger value="messages">
+                                <MessageCircle className="mr-2 h-4 w-4 hidden sm:block" />
+                                Messages
                             </TabsTrigger>
                             <TabsTrigger value="profile">
                                 <User className="mr-2 h-4 w-4 hidden sm:block" />
@@ -285,11 +301,19 @@ export default function ProfessionalDashboardPage() {
                     <TabsContent value="applications" className="space-y-4">
                         <MyApplications professionalId={professionalId} />
                     </TabsContent>
+                    <TabsContent value="calculator" className="space-y-4">
+                        <div className="max-w-2xl mx-auto">
+                            <ProfessionalFeeCalculator />
+                        </div>
+                    </TabsContent>
                     <TabsContent value="earnings" className="space-y-4">
                         <EarningsHistory professionalId={professionalId} />
                     </TabsContent>
                     <TabsContent value="availability" className="space-y-4">
                         <AvailabilityCalendar professionalId={professionalId} />
+                    </TabsContent>
+                    <TabsContent value="messages" className="space-y-4">
+                        <Chat userId={professionalId} userName={professionalName} userType="professional" />
                     </TabsContent>
                     <TabsContent value="profile" className="space-y-4">
                         <ProfessionalProfile professional={professional} />

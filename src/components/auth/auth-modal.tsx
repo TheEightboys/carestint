@@ -21,6 +21,7 @@ import {
   sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
+import { getEmployerByEmail, getProfessionalByEmail } from '@/lib/firebase/firestore';
 
 export type UserType = 'employer' | 'professional';
 type AuthMode = 'signin' | 'signup' | 'verification-pending';
@@ -203,11 +204,37 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
       if (auth.currentUser) {
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
+          // Check if user already has a profile in Firestore
+          const userEmail = auth.currentUser.email || pendingEmail;
+
+          if (userType === 'employer') {
+            const existingEmployer = await getEmployerByEmail(userEmail);
+            if (existingEmployer) {
+              toast({
+                title: 'Welcome back!',
+                description: 'Redirecting to your dashboard...',
+              });
+              window.location.href = '/dashboard/employer';
+              return;
+            }
+          } else {
+            const existingProfessional = await getProfessionalByEmail(userEmail);
+            if (existingProfessional) {
+              toast({
+                title: 'Welcome back!',
+                description: 'Redirecting to your dashboard...',
+              });
+              window.location.href = '/dashboard/professional';
+              return;
+            }
+          }
+
+          // No existing profile, redirect to onboarding
           toast({
             title: 'Email verified!',
             description: 'Redirecting to complete your profile...',
           });
-          const redirectUrl = `/onboarding/${userType}?email=${encodeURIComponent(pendingEmail)}&name=${encodeURIComponent(fullName)}`;
+          const redirectUrl = `/onboarding/${userType}?email=${encodeURIComponent(userEmail)}&name=${encodeURIComponent(fullName || auth.currentUser.displayName || '')}`;
           window.location.href = redirectUrl;
           return;
         }
@@ -218,7 +245,8 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
         title: 'Email not verified yet',
         description: 'Please click the verification link in your email.',
       });
-    } catch {
+    } catch (error) {
+      console.error('Verification check error:', error);
       toast({
         variant: 'destructive',
         title: 'Error',

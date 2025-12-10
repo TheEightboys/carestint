@@ -105,6 +105,31 @@ export type EntityType =
     | 'config'
     | 'superadmin';
 
+// ===== Dual Role System =====
+
+export type ActiveRole = 'employer' | 'professional';
+
+export interface UserAccount {
+    id: string;                          // Firebase UID
+    email: string;
+    phone?: string;
+    employerId?: string;                 // Reference to employers collection
+    professionalId?: string;             // Reference to professionals collection
+    activeRole: ActiveRole;              // Current active mode
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DualRoleInfo {
+    hasEmployerRole: boolean;
+    hasProfessionalRole: boolean;
+    employerId?: string;
+    professionalId?: string;
+    employerStatus?: EmployerStatus;
+    professionalStatus?: ProfessionalStatus;
+    activeRole: ActiveRole;
+}
+
 // ===== Primary Roles =====
 
 export type ProfessionalRole =
@@ -169,6 +194,10 @@ export interface Employer {
     updatedAt: Date;
     approvedAt?: Date;
     suspendedAt?: Date;
+    // Suspension details
+    suspensionDays?: number | null;
+    suspensionEndDate?: Date | null;
+    suspensionReason?: string | null;
 }
 
 export interface Professional {
@@ -213,6 +242,10 @@ export interface Professional {
     approvedAt?: Date;
     suspendedAt?: Date;
     lastActiveAt?: Date;
+    // Suspension details
+    suspensionDays?: number | null;
+    suspensionEndDate?: Date | null;
+    suspensionReason?: string | null;
 }
 
 export interface Stint {

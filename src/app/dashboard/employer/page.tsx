@@ -3,12 +3,15 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Building, LogOut, PlusCircle, Briefcase, User, Wallet, BarChart3, Loader2, Receipt, FileText, Settings } from "lucide-react";
+import { Building, LogOut, PlusCircle, Briefcase, User, Wallet, BarChart3, Loader2, Receipt, FileText, Settings, Calculator, MessageCircle, Home } from "lucide-react";
+import { RoleSwitcher } from "@/components/role-switcher";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostStintForm } from "@/components/dashboard/employer/post-stint-form";
 import { TodaysStints } from "@/components/dashboard/employer/todays-stints";
 import { FacilityProfile } from "@/components/dashboard/employer/facility-profile";
 import { Invoices } from "@/components/dashboard/employer/invoices";
+import { EmployerFeeCalculator } from "@/components/dashboard/employer/employer-fee-calculator";
+import { Chat } from "@/components/chat/chat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -131,6 +134,10 @@ export default function EmployerDashboardPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
+                <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                    <Home className="h-5 w-5" />
+                    <span className="hidden sm:inline text-sm">Home</span>
+                </Link>
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                         <Building className="h-5 w-5 text-primary" />
@@ -146,6 +153,7 @@ export default function EmployerDashboardPage() {
                     </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <RoleSwitcher variant="compact" />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -235,10 +243,18 @@ export default function EmployerDashboardPage() {
 
                 <Tabs defaultValue="overview">
                     <div className="flex items-center overflow-x-auto">
-                        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
                             <TabsTrigger value="overview">
                                 <PlusCircle className="mr-2 h-4 w-4 hidden sm:block" />
                                 Post & Manage
+                            </TabsTrigger>
+                            <TabsTrigger value="messages">
+                                <MessageCircle className="mr-2 h-4 w-4 hidden sm:block" />
+                                Messages
+                            </TabsTrigger>
+                            <TabsTrigger value="calculator">
+                                <Calculator className="mr-2 h-4 w-4 hidden sm:block" />
+                                Calculator
                             </TabsTrigger>
                             <TabsTrigger value="invoices">
                                 <Receipt className="mr-2 h-4 w-4 hidden sm:block" />
@@ -258,6 +274,14 @@ export default function EmployerDashboardPage() {
                             <div className="lg:col-span-3">
                                 <TodaysStints employerId={employerId} />
                             </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="messages" className="space-y-4">
+                        <Chat userId={employerId} userName={employerName} userType="employer" />
+                    </TabsContent>
+                    <TabsContent value="calculator" className="space-y-4">
+                        <div className="max-w-2xl mx-auto">
+                            <EmployerFeeCalculator />
                         </div>
                     </TabsContent>
                     <TabsContent value="invoices" className="space-y-4">

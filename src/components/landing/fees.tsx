@@ -1,37 +1,17 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { CheckCircle2, Calculator, Info, Building, UserCheck, Clock } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getFeeBreakdown, formatCurrency } from '@/lib/fee-calculator';
+import { CheckCircle2, Building, UserCheck, Clock, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function Fees() {
     const sectionRef = useRef<HTMLDivElement>(null);
-    const [offeredRate, setOfferedRate] = useState(5000);
-    const [isUrgent, setIsUrgent] = useState(false);
-    const [currency, setCurrency] = useState<'KSh' | 'UGX' | 'TZS'>('KSh');
-
-    const breakdown = getFeeBreakdown(offeredRate, isUrgent ? 'urgent' : 'normal');
-
-    // Currency conversion rates (approximate)
-    const currencyRates: Record<string, number> = {
-        'KSh': 1,
-        'UGX': 28.5,  // 1 KSh ≈ 28.5 UGX
-        'TZS': 18.5   // 1 KSh ≈ 18.5 TZS
-    };
-
-    const formatWithCurrency = (amount: number) => {
-        const converted = Math.round(amount * currencyRates[currency]);
-        return `${currency} ${converted.toLocaleString()}`;
-    };
 
     useLayoutEffect(() => {
         const ctx = gsap.context(() => {
@@ -67,21 +47,6 @@ export function Fees() {
                     }
                 }
             );
-
-            gsap.fromTo(".fee-calculator",
-                { opacity: 0, x: -50 },
-                {
-                    opacity: 1,
-                    x: 0,
-                    duration: 1,
-                    ease: "power3.out",
-                    scrollTrigger: {
-                        trigger: ".fee-calculator",
-                        start: "top 85%",
-                        toggleActions: "play none none none"
-                    }
-                }
-            );
         }, sectionRef);
 
         return () => ctx.revert();
@@ -109,7 +74,7 @@ export function Fees() {
                 </div>
 
                 {/* Two Column Fee Structure */}
-                <div className="fee-columns grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+                <div className="fee-columns grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                     {/* For Employers Column */}
                     <Card className="fee-column glass-card border-primary/20 overflow-hidden">
                         <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-6">
@@ -165,6 +130,19 @@ export function Fees() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* CTA for employers */}
+                            <div className="pt-4 border-t">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    Calculate exact costs in your dashboard after signing up.
+                                </p>
+                                <Button asChild className="w-full">
+                                    <Link href="/auth?type=employer">
+                                        Get Started as Employer
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -201,7 +179,7 @@ export function Fees() {
                                     <div className="flex-1">
                                         <h4 className="font-semibold text-green-500">Payout Timeline</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            Receive payment within 24 hours after the dispute window closes
+                                            Receive payment within 24 hours after shift completion (no disputes)
                                         </p>
                                     </div>
                                 </div>
@@ -226,125 +204,29 @@ export function Fees() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* CTA for professionals */}
+                            <div className="pt-4 border-t">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                    Use our earnings calculator in your dashboard after signing up.
+                                </p>
+                                <Button asChild variant="outline" className="w-full border-accent text-accent hover:bg-accent/10">
+                                    <Link href="/auth?type=professional">
+                                        Join as Professional
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Interactive fee calculator */}
-                <div className="fee-calculator max-w-2xl mx-auto">
-                    <Card className="glass-card border-accent/20 overflow-hidden">
-                        <CardHeader className="bg-gradient-to-r from-accent/10 to-transparent">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-                                    <Calculator className="h-5 w-5 text-accent" />
-                                </div>
-                                <div>
-                                    <CardTitle className="font-headline text-xl">Fee Calculator</CardTitle>
-                                    <CardDescription>See exactly what you'll pay or earn</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-6">
-                            {/* Input controls */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="currency" className="text-sm font-medium">Currency</Label>
-                                    <Select value={currency} onValueChange={(v) => setCurrency(v as 'KSh' | 'UGX' | 'TZS')}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="KSh">🇰🇪 KSh (Kenya)</SelectItem>
-                                            <SelectItem value="UGX">🇺🇬 UGX (Uganda)</SelectItem>
-                                            <SelectItem value="TZS">🇹🇿 TZS (Tanzania)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="rate" className="text-sm font-medium">Offered Rate ({currency})</Label>
-                                    <Input
-                                        id="rate"
-                                        type="number"
-                                        value={Math.round(offeredRate * currencyRates[currency])}
-                                        onChange={(e) => setOfferedRate(Math.round((Number(e.target.value) || 0) / currencyRates[currency]))}
-                                        className="text-lg font-semibold"
-                                        min={0}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Urgency</Label>
-                                    <div className="flex items-center gap-3 rounded-lg border bg-background p-3">
-                                        <Switch
-                                            checked={isUrgent}
-                                            onCheckedChange={setIsUrgent}
-                                        />
-                                        <span className={`text-sm font-medium ${isUrgent ? 'text-yellow-500' : 'text-foreground'}`}>
-                                            {isUrgent ? '⚡ Urgent' : '📅 Normal'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Results */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
-                                {/* Employer side */}
-                                <div className="space-y-3 rounded-lg bg-secondary/50 p-4">
-                                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                                        <span className="h-2 w-2 rounded-full bg-blue-400"></span>
-                                        Employer Pays
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Offered Rate</span>
-                                            <span>{formatWithCurrency(breakdown.clinicOfferedRate)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Booking Fee ({breakdown.clinicBookingFee.percent}%)</span>
-                                            <span className="text-accent">+ {formatWithCurrency(breakdown.clinicBookingFee.amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                                            <span>Total</span>
-                                            <span className="gradient-text">{formatWithCurrency(breakdown.clinicTotalCost)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Professional side */}
-                                <div className="space-y-3 rounded-lg bg-secondary/50 p-4">
-                                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                                        <span className="h-2 w-2 rounded-full bg-green-400"></span>
-                                        Professional Receives
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Offered Rate</span>
-                                            <span>{formatWithCurrency(breakdown.proGrossAmount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Platform Fee (5%)</span>
-                                            <span className="text-red-400">- {formatWithCurrency(breakdown.proPlatformFee.amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Mobile/Bank Transfer Fee</span>
-                                            <span className="text-red-400">- {formatWithCurrency(breakdown.proMpesaCost)}</span>
-                                        </div>
-                                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                                            <span>Net Payout</span>
-                                            <span className="text-green-400">{formatWithCurrency(breakdown.proNetPayout)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Platform revenue note */}
-                            <div className="flex items-start gap-2 rounded-lg bg-accent/5 p-3 text-xs text-muted-foreground">
-                                <Info className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                                <span>
-                                    Platform revenue from this stint: <span className="font-semibold text-accent">{formatWithCurrency(breakdown.platformRevenue)}</span> (booking fee + platform fee)
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* Bottom note */}
+                <div className="text-center text-sm text-muted-foreground max-w-xl mx-auto">
+                    <p>
+                        Detailed fee calculators are available in your dashboard after you create an account.
+                        Employers see their costs, professionals see their earnings — with full transparency.
+                    </p>
                 </div>
             </div>
         </section>

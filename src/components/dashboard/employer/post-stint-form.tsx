@@ -86,6 +86,9 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   const [appliedPromo, setAppliedPromo] = useState<Promotion | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
 
+  // Currency state
+  const [currency, setCurrency] = useState<'KSh' | 'UGX' | 'TZS'>('KSh');
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -139,7 +142,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
       setPromoError(null);
       toast({
         title: 'Promo code applied!',
-        description: `You'll get ${matchedPromo.creditAmount.toLocaleString()} KSh off this stint.`,
+        description: `You'll get ${matchedPromo.creditAmount.toLocaleString()} ${currency} off this stint.`,
       });
     } catch (error) {
       console.error('Promo validation error:', error);
@@ -202,7 +205,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
         description: data.description,
         city: data.city,
         offeredRate: data.rate,
-        currency: "KES",
+        currency: currency,
         allowBids: data.allowBids,
         urgency,
       });
@@ -417,13 +420,13 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               )}
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
                 control={form.control}
                 name="rate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Offered Rate (KSh)</FormLabel>
+                    <FormLabel>Offered Rate</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="e.g., 5000" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
                     </FormControl>
@@ -431,6 +434,19 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                   </FormItem>
                 )}
               />
+              <FormItem>
+                <FormLabel>Currency</FormLabel>
+                <Select value={currency} onValueChange={(v) => setCurrency(v as 'KSh' | 'UGX' | 'TZS')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KSh">🇰🇪 KSh (Kenya)</SelectItem>
+                    <SelectItem value="UGX">🇺🇬 UGX (Uganda)</SelectItem>
+                    <SelectItem value="TZS">🇹🇿 TZS (Tanzania)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormItem>
               <FormField
                 control={form.control}
                 name="allowBids"
@@ -479,7 +495,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                   <div className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-600">
-                      "{appliedPromo.name}" applied - KSh {appliedPromo.creditAmount.toLocaleString()} off!
+                      "{appliedPromo.name}" applied - {currency} {appliedPromo.creditAmount.toLocaleString()} off!
                     </span>
                   </div>
                   <Button variant="ghost" size="sm" onClick={handleRemovePromo}>
@@ -522,31 +538,31 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 <div className="flex justify-between">
                   <span>Normal Notice Fee (15%):</span>
                   <span className={`font-medium ${promoDiscount > 0 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                    KSh {normalFee.toLocaleString()}
+                    {currency} {normalFee.toLocaleString()}
                   </span>
                 </div>
                 {promoDiscount > 0 && (
                   <>
                     <div className="flex justify-between text-green-600">
                       <span>Promo Discount:</span>
-                      <span className="font-medium">- KSh {promoDiscount.toLocaleString()}</span>
+                      <span className="font-medium">- {currency} {promoDiscount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-accent font-bold">
                       <span>Your Fee:</span>
-                      <span>KSh {finalFee.toLocaleString()}</span>
+                      <span>{currency} {finalFee.toLocaleString()}</span>
                     </div>
                   </>
                 )}
                 <div className="flex justify-between">
                   <span>Urgent Notice Fee (20%):</span>
-                  <span className="font-medium text-foreground">KSh {urgentFee.toLocaleString()}</span>
+                  <span className="font-medium text-foreground">{currency} {urgentFee.toLocaleString()}</span>
                 </div>
                 {watchedRate > 0 && (
                   <>
                     <hr className="my-2" />
                     <div className="flex justify-between text-green-600">
                       <span>Professional Receives (~):</span>
-                      <span className="font-medium">KSh {proReceives.toLocaleString()}</span>
+                      <span className="font-medium">{currency} {proReceives.toLocaleString()}</span>
                     </div>
                   </>
                 )}
