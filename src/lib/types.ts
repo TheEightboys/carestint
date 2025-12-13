@@ -22,14 +22,16 @@ export type ProfessionalStatus =
     | 'rejected';
 
 export type StintStatus =
-    | 'draft'
-    | 'open'
-    | 'accepted'
-    | 'in_progress'
-    | 'completed'
-    | 'disputed'
-    | 'settled'
-    | 'cancelled';
+    | 'pending'        // Stint posted but no pro confirmed
+    | 'confirmed'      // Pro selected + accepted, upcoming
+    | 'in_progress'    // Pro clocked in / shift started
+    | 'completed'      // Shift ended, hours confirmed
+    | 'cancelled'      // Cancelled (with sub-reason metadata)
+    | 'expired'        // Not filled in time
+    | 'no_show'        // Pro didn't attend
+    | 'disputed'       // Hours or payment dispute
+    | 'under_review'   // SuperAdmin flagged for review
+    | 'closed';        // Rating done, archived
 
 export type ApplicationStatus =
     | 'pending'
@@ -293,8 +295,22 @@ export interface Stint {
     // Cancellation
     cancelledAt?: Date;
     cancellationReason?: string;
+    cancellationSubReason?: string;  // Detailed metadata for cancellation
     cancellationFeeApplied: boolean;
     cancellationFeeAmount?: number;
+    // SuperAdmin fields
+    internalNotes?: string;          // SuperAdmin only - internal notes
+    penaltyAmount?: number;          // For no-shows/cancellations
+    reliabilityImpact?: number;      // Impact on pro's reliability score
+    reviewedBy?: string;             // SuperAdmin who reviewed
+    reviewedAt?: Date;               // When it was reviewed
+    // Expiry
+    expiresAt?: Date;                // When stint auto-expires if not filled
+    expiredAt?: Date;                // When stint actually expired
+    // Closure
+    closedAt?: Date;                 // When stint was archived
+    employerRating?: number;         // Rating given by employer
+    professionalRating?: number;     // Rating given by professional
     // Timestamps
     createdAt: Date;
     updatedAt: Date;

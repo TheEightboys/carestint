@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "CareStint",
+    "slug": "CareStint",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "scheme": "carestint",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5F3EF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.carestint.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CareStint needs camera access to capture documents and profile photos.",
+        "NSPhotoLibraryUsageDescription": "CareStint needs photo library access to upload documents and profile photos.",
+        "NSPhotoLibraryAddUsageDescription": "CareStint needs access to save captured photos.",
+        "NSDocumentsFolderUsageDescription": "CareStint needs access to upload license and credential documents."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A1628"
+      },
+      "package": "com.carestint.app",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CareStint needs camera access to capture documents and profile photos."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CareStint needs photo library access to upload documents.",
+          "cameraPermission": "CareStint needs camera access to capture photos."
+        }
+      ],
+      "expo-document-picker"
+    ]
+  }
+}

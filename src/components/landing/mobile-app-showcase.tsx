@@ -116,11 +116,6 @@ export function MobileAppShowcase() {
             <div className="container mx-auto px-4 relative z-10">
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <div className="mobile-badge inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-accent/20 to-primary/20 px-5 py-2 text-sm font-semibold backdrop-blur-sm border border-accent/30 shadow-lg mb-6">
-                        <Smartphone className="h-4 w-4 text-accent animate-pulse" />
-                        <span className="gradient-text">iOS & Android apps coming soon</span>
-                    </div>
-
                     <h2 className="mobile-title font-headline text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
                         Take <span className="gradient-text">CareStint</span> With You
                     </h2>

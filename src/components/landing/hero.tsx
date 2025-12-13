@@ -20,11 +20,17 @@ export function Hero() {
   const { user, userRole, isLoading } = useUser();
 
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [howItWorksTab, setHowItWorksTab] = useState<'employers' | 'professionals'>('employers');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userTypePickerOpen, setUserTypePickerOpen] = useState(false);
   const [authAction, setAuthAction] = useState<'signin' | 'signup'>('signin');
   const [authUserType, setAuthUserType] = useState<UserType>('professional');
   const heroRef = useRef<HTMLDivElement>(null);
+
+  const openHowItWorks = (tab: 'employers' | 'professionals') => {
+    setHowItWorksTab(tab);
+    setHowItWorksOpen(true);
+  };
 
   const isLoggedIn = !!user && !!userRole;
 
@@ -282,7 +288,7 @@ export function Hero() {
                     <Button
                       variant="outline"
                       className="w-full transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:scale-105 group-hover:border-accent"
-                      onClick={() => setHowItWorksOpen(true)}
+                      onClick={() => openHowItWorks('employers')}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
                       How it works
@@ -335,7 +341,7 @@ export function Hero() {
                     <Button
                       variant="outline"
                       className="w-full transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:scale-105 group-hover:border-accent"
-                      onClick={() => setHowItWorksOpen(true)}
+                      onClick={() => openHowItWorks('professionals')}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
                       How it works
@@ -353,7 +359,7 @@ export function Hero() {
           <DialogHeader>
             <DialogTitle className="font-headline text-3xl">How CareStint Works</DialogTitle>
           </DialogHeader>
-          <HowItWorksModalContent />
+          <HowItWorksModalContent defaultTab={howItWorksTab} />
         </DialogContent>
       </Dialog>
 

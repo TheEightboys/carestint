@@ -50,9 +50,13 @@ const professionalSteps = [
     }
 ];
 
-export function HowItWorksModalContent() {
+interface HowItWorksModalContentProps {
+    defaultTab?: 'employers' | 'professionals';
+}
+
+export function HowItWorksModalContent({ defaultTab = 'employers' }: HowItWorksModalContentProps) {
     return (
-        <Tabs defaultValue="employers" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="employers" className="flex items-center gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground">
                     <Building2 className="h-4 w-4" />

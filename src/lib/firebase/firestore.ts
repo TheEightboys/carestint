@@ -1449,3 +1449,55 @@ export const getWaitlistCount = async () => {
         return 0;
     }
 };
+
+// =============================================
+// ADDITIONAL STINT SERVICES
+// =============================================
+
+// Generic update stint function
+export const updateStint = async (stintId: string, updates: Partial<any>) => {
+    const firestore = getDb();
+    try {
+        const docRef = doc(firestore, 'stints', stintId);
+        await updateDoc(docRef, {
+            ...updates,
+            updatedAt: serverTimestamp(),
+        });
+        return true;
+    } catch (error) {
+        console.error("Error updating stint:", error);
+        return false;
+    }
+};
+
+// Alias for getAuditLogsByEntity that matches the import in stints page
+export const getAuditLogsForEntity = async (entityType: EntityType, entityId: string) => {
+    return getAuditLogsByEntity(entityType, entityId);
+};
+
+// Get payouts for a specific stint
+export const getPayoutsForStint = async (stintId: string) => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'payouts'), where('stintId', '==', stintId));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error getting payouts for stint:", error);
+        return [];
+    }
+};
+
+// Get stints for a professional (where they are assigned)
+export const getStintsByProfessional = async (professionalId: string) => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'stints'), where('acceptedProfessionalId', '==', professionalId));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error getting stints by professional:", error);
+        return [];
+    }
+};
+
