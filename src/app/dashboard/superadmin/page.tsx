@@ -230,28 +230,28 @@ export default function SuperAdminDashboardPage() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+      <main className="flex flex-1 flex-col gap-3 p-4 sm:px-6 sm:py-4 sm:gap-4 md:gap-8 safe-area-x">
         {/* Navigation Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full md:grid md:grid-cols-7 md:w-full">
-              <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
-              <TabsTrigger value="employers" asChild className="whitespace-nowrap">
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
+            <TabsList className="inline-flex h-auto min-w-max gap-1 p-1 md:grid md:grid-cols-7 md:w-full">
+              <TabsTrigger value="overview" className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="employers" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
                 <Link href="/dashboard/superadmin/employers">Employers</Link>
               </TabsTrigger>
-              <TabsTrigger value="professionals" asChild className="whitespace-nowrap">
+              <TabsTrigger value="professionals" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
                 <Link href="/dashboard/superadmin/professionals">Professionals</Link>
               </TabsTrigger>
-              <TabsTrigger value="stints" asChild className="whitespace-nowrap">
+              <TabsTrigger value="stints" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
                 <Link href="/dashboard/superadmin/stints">Stints</Link>
               </TabsTrigger>
-              <TabsTrigger value="finance" asChild className="whitespace-nowrap">
+              <TabsTrigger value="finance" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
                 <Link href="/dashboard/superadmin/finance">Finance</Link>
               </TabsTrigger>
-              <TabsTrigger value="promotions" asChild className="whitespace-nowrap">
-                <Link href="/dashboard/superadmin/promotions">Promotions</Link>
+              <TabsTrigger value="promotions" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
+                <Link href="/dashboard/superadmin/promotions">Promos</Link>
               </TabsTrigger>
-              <TabsTrigger value="audit" asChild className="whitespace-nowrap">
+              <TabsTrigger value="audit" asChild className="touch-target whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
                 <Link href="/dashboard/superadmin/audit">Audit</Link>
               </TabsTrigger>
             </TabsList>
@@ -259,7 +259,7 @@ export default function SuperAdminDashboardPage() {
 
           <TabsContent value="overview" className="space-y-4">
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">

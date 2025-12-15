@@ -86,6 +86,11 @@ export default function ProfessionalStintsPage() {
     const [issueType, setIssueType] = useState("");
     const [issueDescription, setIssueDescription] = useState("");
 
+    // Appeal Dialog State
+    const [appealDialogOpen, setAppealDialogOpen] = useState(false);
+    const [appealReason, setAppealReason] = useState("");
+    const [appealEvidence, setAppealEvidence] = useState("");
+
     // Earnings summary
     const [earnings, setEarnings] = useState({ total: 0, thisMonth: 0, pending: 0 });
 
@@ -203,6 +208,7 @@ export default function ProfessionalStintsPage() {
                 break;
             case 'view_policy':
             case 'view_reason':
+                setSelectedStint(stint);
                 setPolicyDialogOpen(true);
                 break;
             case 'report_issue':
@@ -210,6 +216,12 @@ export default function ProfessionalStintsPage() {
                 setIssueType("");
                 setIssueDescription("");
                 setReportIssueDialogOpen(true);
+                break;
+            case 'appeal':
+                setSelectedStint(stint);
+                setAppealReason("");
+                setAppealEvidence("");
+                setAppealDialogOpen(true);
                 break;
             case 'add_calendar':
                 addToCalendar(stint);
@@ -305,6 +317,27 @@ Thank you for working with CareStint!
             setRatingDialogOpen(false);
         } catch (error) {
             console.error("Error submitting rating:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const submitAppeal = async () => {
+        if (!selectedStint || !appealReason) return;
+
+        setIsSubmitting(true);
+        try {
+            await updateStint(selectedStint.id, {
+                appealSubmitted: true,
+                appealReason,
+                appealEvidence,
+                appealSubmittedAt: new Date(),
+                status: 'under_review' as StintStatus
+            });
+            await loadData();
+            setAppealDialogOpen(false);
+        } catch (error) {
+            console.error("Error submitting appeal:", error);
         } finally {
             setIsSubmitting(false);
         }
@@ -522,7 +555,7 @@ Thank you for working with CareStint!
                                         {getDisplayStints.map((stint) => (
                                             <div
                                                 key={stint.id}
-                                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors ${stint.status === 'disputed' || stint.status === 'under_review' ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10' : ''} ${stint.status === 'no_show' ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10' : ''}`}
                                             >
                                                 {/* Stint Info */}
                                                 <div className="flex-1 space-y-2">
@@ -553,6 +586,33 @@ Thank you for working with CareStint!
                                                             {stint.city}
                                                         </span>
                                                     </div>
+                                                    {/* Review Status Indicator for Issues */}
+                                                    {(stint.status === 'disputed' || stint.status === 'under_review') && (
+                                                        <div className="mt-2 p-2 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                                                            <div className="flex items-center gap-2 text-sm">
+                                                                <AlertCircle className="h-4 w-4" />
+                                                                <span className="font-medium">
+                                                                    {stint.disputeResolved ? 'Resolved – see final earnings' : 'Under review by CareStint'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {/* No-Show Policy Warning */}
+                                                    {stint.status === 'no_show' && (
+                                                        <div className="mt-2 p-2 rounded-md bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                                            <div className="flex items-center gap-2 text-sm">
+                                                                <AlertCircle className="h-4 w-4" />
+                                                                <span className="font-medium">No-show recorded</span>
+                                                            </div>
+                                                            <p className="text-xs mt-1">Multiple no-shows may affect your reliability score and booking eligibility.</p>
+                                                        </div>
+                                                    )}
+                                                    {/* Cancellation reason display */}
+                                                    {stint.status === 'cancelled' && stint.cancellationReason && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Cancelled: {stint.cancellationReason}
+                                                        </p>
+                                                    )}
                                                     {/* Earnings Display */}
                                                     <div className="flex items-center gap-4">
                                                         <span className="text-lg font-bold text-accent flex items-center gap-1">
@@ -1001,6 +1061,64 @@ Thank you for working with CareStint!
                         >
                             {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <AlertTriangle className="h-4 w-4 mr-2" />}
                             Submit Report
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Appeal Dialog */}
+            <Dialog open={appealDialogOpen} onOpenChange={setAppealDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-amber-600" />
+                            Appeal Decision
+                        </DialogTitle>
+                        <DialogDescription>
+                            Submit an appeal if you believe this no-show was recorded in error
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {selectedStint && (
+                            <div className="p-3 bg-muted rounded-lg text-sm">
+                                <p><span className="font-medium">Stint:</span> {selectedStint.role?.replace('-', ' ')} at {selectedStint.employerName}</p>
+                                <p><span className="font-medium">Date:</span> {selectedStint.shiftDate ? new Date(selectedStint.shiftDate.toDate ? selectedStint.shiftDate.toDate() : selectedStint.shiftDate).toLocaleDateString() : 'N/A'}</p>
+                                <p><span className="font-medium">Status:</span> {selectedStint.status}</p>
+                            </div>
+                        )}
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                            <p className="text-sm text-amber-800 dark:text-amber-300">
+                                <strong>Note:</strong> Appeals are reviewed by CareStint within 48 hours. Frequent no-shows may affect your booking eligibility.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Reason for Appeal <span className="text-destructive">*</span></label>
+                            <Textarea
+                                placeholder="Explain why you believe this no-show was recorded in error..."
+                                value={appealReason}
+                                onChange={(e) => setAppealReason(e.target.value)}
+                                rows={4}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Supporting Evidence (optional)</label>
+                            <Textarea
+                                placeholder="Provide any additional details or evidence (e.g., communication with employer, traffic issues, medical emergency)..."
+                                value={appealEvidence}
+                                onChange={(e) => setAppealEvidence(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setAppealDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={submitAppeal}
+                            disabled={!appealReason.trim() || isSubmitting}
+                            className="bg-amber-600 hover:bg-amber-700"
+                        >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                            Submit Appeal
                         </Button>
                     </DialogFooter>
                 </DialogContent>

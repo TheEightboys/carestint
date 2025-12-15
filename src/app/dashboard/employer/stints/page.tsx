@@ -79,6 +79,13 @@ export default function EmployerStintsPage() {
     // View Credits Dialog State
     const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
 
+    // Add Evidence Dialog State
+    const [evidenceDialogOpen, setEvidenceDialogOpen] = useState(false);
+    const [evidenceNotes, setEvidenceNotes] = useState("");
+
+    // View Review Status Dialog State
+    const [reviewStatusDialogOpen, setReviewStatusDialogOpen] = useState(false);
+
     useEffect(() => {
         if (employerId) {
             loadStints();
@@ -176,6 +183,19 @@ export default function EmployerStintsPage() {
                 // Generate and download invoice
                 generateInvoice(stint);
                 break;
+            case 'add_evidence':
+                setSelectedStint(stint);
+                setEvidenceNotes("");
+                setEvidenceDialogOpen(true);
+                break;
+            case 'view_status':
+                setSelectedStint(stint);
+                setReviewStatusDialogOpen(true);
+                break;
+            case 'view_reason':
+                setSelectedStint(stint);
+                setReviewStatusDialogOpen(true);
+                break;
         }
     };
 
@@ -247,6 +267,24 @@ Thank you for using CareStint!
             setConfirmHoursDialogOpen(false);
         } catch (error) {
             console.error("Error confirming hours:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const submitEvidence = async () => {
+        if (!selectedStint || !evidenceNotes) return;
+
+        setIsSubmitting(true);
+        try {
+            await updateStint(selectedStint.id, {
+                employerEvidence: evidenceNotes,
+                evidenceSubmittedAt: new Date()
+            });
+            await loadStints();
+            setEvidenceDialogOpen(false);
+        } catch (error) {
+            console.error("Error submitting evidence:", error);
         } finally {
             setIsSubmitting(false);
         }
@@ -386,7 +424,7 @@ Thank you for using CareStint!
                                         {filteredStints.map((stint) => (
                                             <div
                                                 key={stint.id}
-                                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors ${stint.status === 'disputed' || stint.status === 'under_review' ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                                             >
                                                 {/* Stint Info */}
                                                 <div className="flex-1 space-y-2">
@@ -421,6 +459,26 @@ Thank you for using CareStint!
                                                         <p className="text-sm flex items-center gap-1 text-accent">
                                                             <User className="h-3.5 w-3.5" />
                                                             Assigned to: {stint.acceptedProfessionalName}
+                                                        </p>
+                                                    )}
+                                                    {/* Review Status Indicator for Issues */}
+                                                    {(stint.status === 'disputed' || stint.status === 'under_review' || stint.status === 'no_show') && (
+                                                        <div className="mt-2 p-2 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                                                            <div className="flex items-center gap-2 text-sm">
+                                                                <AlertTriangle className="h-4 w-4" />
+                                                                <span className="font-medium">
+                                                                    {stint.disputeResolved ? 'Resolved – adjustment applied' : 'CareStint reviewing'}
+                                                                </span>
+                                                            </div>
+                                                            {stint.refundAmount && (
+                                                                <p className="text-xs mt-1">Credit issued: KES {stint.refundAmount?.toLocaleString()}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {/* Cancellation reason display */}
+                                                    {stint.status === 'cancelled' && stint.cancellationReason && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            Cancelled: {stint.cancellationReason}
                                                         </p>
                                                     )}
                                                 </div>
@@ -795,6 +853,124 @@ Thank you for using CareStint!
                         <Button asChild>
                             <a href="mailto:support@carestint.com">Contact Support</a>
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Evidence Dialog */}
+            <Dialog open={evidenceDialogOpen} onOpenChange={setEvidenceDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-amber-600" />
+                            Add Evidence / Comment
+                        </DialogTitle>
+                        <DialogDescription>
+                            Provide evidence or comments to support your dispute or no-show claim
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {selectedStint && (
+                            <div className="p-3 bg-muted rounded-lg text-sm">
+                                <p><span className="font-medium">Stint:</span> {selectedStint.role?.replace('-', ' ')}</p>
+                                <p><span className="font-medium">Professional:</span> {selectedStint.acceptedProfessionalName || 'N/A'}</p>
+                                <p><span className="font-medium">Date:</span> {selectedStint.shiftDate ? new Date(selectedStint.shiftDate.toDate ? selectedStint.shiftDate.toDate() : selectedStint.shiftDate).toLocaleDateString() : 'N/A'}</p>
+                                <p><span className="font-medium">Status:</span> {selectedStint.status}</p>
+                            </div>
+                        )}
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p className="text-sm text-blue-800 dark:text-blue-300">
+                                <strong>Tip:</strong> Include details like communication logs, screenshots, or other relevant information to support your case.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Evidence / Comments <span className="text-destructive">*</span></label>
+                            <Textarea
+                                placeholder="Describe the situation and provide any relevant details or evidence..."
+                                value={evidenceNotes}
+                                onChange={(e) => setEvidenceNotes(e.target.value)}
+                                rows={5}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEvidenceDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={submitEvidence}
+                            disabled={!evidenceNotes.trim() || isSubmitting}
+                            className="bg-amber-600 hover:bg-amber-700"
+                        >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+                            Submit Evidence
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Review Status Dialog */}
+            <Dialog open={reviewStatusDialogOpen} onOpenChange={setReviewStatusDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Eye className="h-5 w-5" />
+                            Review Status
+                        </DialogTitle>
+                        <DialogDescription>
+                            Current status and resolution details for this stint
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        {selectedStint && (
+                            <>
+                                <div className="p-4 rounded-lg bg-muted space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Current Status</span>
+                                        <Badge className={`${getStatusDisplay(selectedStint.status).bgColor} ${getStatusDisplay(selectedStint.status).color}`}>
+                                            {getStatusDisplay(selectedStint.status).label}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-muted-foreground">Review Stage</span>
+                                        <span className="font-medium">
+                                            {selectedStint.disputeResolved ? '✅ Resolved' : selectedStint.status === 'under_review' ? '🔍 Under Review' : '⏳ Pending'}
+                                        </span>
+                                    </div>
+                                    {selectedStint.cancellationReason && (
+                                        <div className="border-t pt-2">
+                                            <p className="text-sm text-muted-foreground">Cancellation Reason:</p>
+                                            <p className="text-sm">{selectedStint.cancellationReason}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                {selectedStint.disputeResolved && (
+                                    <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                                        <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Resolution</h4>
+                                        <p className="text-sm text-green-700 dark:text-green-400">
+                                            {selectedStint.resolutionNotes || 'This issue has been resolved by CareStint.'}
+                                        </p>
+                                        {selectedStint.refundAmount > 0 && (
+                                            <p className="text-sm font-medium mt-2">
+                                                Credit issued: KES {selectedStint.refundAmount?.toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                {!selectedStint.disputeResolved && (selectedStint.status === 'disputed' || selectedStint.status === 'under_review') && (
+                                    <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                        <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">CareStint Reviewing</h4>
+                                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                                            Our team is reviewing this issue. You will be notified once a resolution is reached. This typically takes 24-48 hours.
+                                        </p>
+                                    </div>
+                                )}
+                                <div className="text-sm text-muted-foreground">
+                                    <p>Questions? <a href="mailto:support@carestint.com" className="text-accent hover:underline">Contact support</a></p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setReviewStatusDialogOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -50,7 +50,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import { getAllStints, getDashboardStats, updateStint, getAuditLogsForEntity, getPayoutsForStint } from "@/lib/firebase/firestore";
+import { getAllStints, getDashboardStats, updateStint, getAuditLogsForEntity, getPayoutsForStint, getAllEmployers } from "@/lib/firebase/firestore";
 import {
     SUPERADMIN_TABS,
     SUPERADMIN_ACTIONS,
@@ -63,6 +63,7 @@ import type { StintStatus, Stint, AuditLog, Payout } from "@/lib/types";
 
 export default function StintsPage() {
     const [stints, setStints] = useState<any[]>([]);
+    const [employers, setEmployers] = useState<any[]>([]);
     const [stats, setStats] = useState({
         totalStints: 0,
         activeStints: 0,
@@ -76,8 +77,11 @@ export default function StintsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [roleFilter, setRoleFilter] = useState("all");
+    const [tenantFilter, setTenantFilter] = useState("all");
     const [cityFilter, setCityFilter] = useState("");
     const [dateFilter, setDateFilter] = useState("");
+    const [dateRangeStart, setDateRangeStart] = useState("");
+    const [dateRangeEnd, setDateRangeEnd] = useState("");
 
     // Expanded row state
     const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -120,12 +124,14 @@ export default function StintsPage() {
 
     const loadData = async () => {
         try {
-            const [stintsData, statsData] = await Promise.all([
+            const [stintsData, statsData, employersData] = await Promise.all([
                 getAllStints(),
                 getDashboardStats(),
+                getAllEmployers(),
             ]);
             setStints(stintsData);
             setStats(statsData);
+            setEmployers(employersData);
         } catch (error) {
             console.error("Error loading stints data:", error);
         } finally {
@@ -164,7 +170,12 @@ export default function StintsPage() {
             );
         }
 
-        // Apply date filter
+        // Apply tenant/employer filter
+        if (tenantFilter !== "all") {
+            filtered = filtered.filter(stint => stint.employerId === tenantFilter);
+        }
+
+        // Apply date filter (single date)
         if (dateFilter) {
             filtered = filtered.filter(stint => {
                 const stintDate = stint.shiftDate?.toDate ? stint.shiftDate.toDate() : new Date(stint.shiftDate);
@@ -173,8 +184,24 @@ export default function StintsPage() {
             });
         }
 
+        // Apply date range filter
+        if (dateRangeStart || dateRangeEnd) {
+            filtered = filtered.filter(stint => {
+                const stintDate = stint.shiftDate?.toDate ? stint.shiftDate.toDate() : new Date(stint.shiftDate);
+                if (dateRangeStart && stintDate < new Date(dateRangeStart)) return false;
+                if (dateRangeEnd && stintDate > new Date(dateRangeEnd + 'T23:59:59')) return false;
+                return true;
+            });
+        }
+
         return filtered;
-    }, [stints, activeTab, searchQuery, statusFilter, roleFilter, cityFilter, dateFilter]);
+    }, [stints, activeTab, searchQuery, statusFilter, roleFilter, cityFilter, tenantFilter, dateFilter, dateRangeStart, dateRangeEnd]);
+
+    // Unique cities for filter dropdown
+    const uniqueCities = useMemo(() => {
+        const cities = new Set(stints.map(s => s.city).filter(Boolean));
+        return Array.from(cities).sort();
+    }, [stints]);
 
     const tabCounts = useMemo(() => getStintCountByTab(stints, 'superadmin'), [stints]);
 
@@ -471,9 +498,10 @@ export default function StintsPage() {
                                 <Filter className="h-4 w-4" />
                                 Advanced Filters
                             </CardTitle>
+                            <CardDescription>Filter stints by tenant, city, specialty, date, and more</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 <div className="flex items-center gap-2">
                                     <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                     <Input
@@ -483,6 +511,20 @@ export default function StintsPage() {
                                         className="w-full"
                                     />
                                 </div>
+                                <Select value={tenantFilter} onValueChange={setTenantFilter}>
+                                    <SelectTrigger>
+                                        <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+                                        <SelectValue placeholder="Tenant/Employer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Employers</SelectItem>
+                                        {employers.map((emp) => (
+                                            <SelectItem key={emp.id} value={emp.id}>
+                                                {emp.facilityName}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Status" />
@@ -503,10 +545,10 @@ export default function StintsPage() {
                                 </Select>
                                 <Select value={roleFilter} onValueChange={setRoleFilter}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Role" />
+                                        <SelectValue placeholder="Specialty/Role" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Roles</SelectItem>
+                                        <SelectItem value="all">All Specialties</SelectItem>
                                         <SelectItem value="rn">Nurse (RN)</SelectItem>
                                         <SelectItem value="dentist">Dentist</SelectItem>
                                         <SelectItem value="clinical-officer">Clinical Officer</SelectItem>
@@ -517,19 +559,49 @@ export default function StintsPage() {
                                         <SelectItem value="midwife">Midwife</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Input
-                                    placeholder="Filter by city..."
-                                    value={cityFilter}
-                                    onChange={(e) => setCityFilter(e.target.value)}
-                                />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                <Select value={cityFilter} onValueChange={setCityFilter}>
+                                    <SelectTrigger>
+                                        <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                                        <SelectValue placeholder="City" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">All Cities</SelectItem>
+                                        {uniqueCities.map((city) => (
+                                            <SelectItem key={city} value={city}>
+                                                {city}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">From:</span>
+                                    <Input
+                                        type="date"
+                                        value={dateRangeStart}
+                                        onChange={(e) => setDateRangeStart(e.target.value)}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">To:</span>
+                                    <Input
+                                        type="date"
+                                        value={dateRangeEnd}
+                                        onChange={(e) => setDateRangeEnd(e.target.value)}
+                                        className="w-full"
+                                    />
+                                </div>
                                 <Input
                                     type="date"
+                                    placeholder="Specific date"
                                     value={dateFilter}
                                     onChange={(e) => setDateFilter(e.target.value)}
                                     className="w-full"
                                 />
                             </div>
-                            {(searchQuery || statusFilter !== "all" || roleFilter !== "all" || cityFilter || dateFilter) && (
+                            {(searchQuery || statusFilter !== "all" || roleFilter !== "all" || tenantFilter !== "all" || cityFilter || dateFilter || dateRangeStart || dateRangeEnd) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -538,8 +610,11 @@ export default function StintsPage() {
                                         setSearchQuery("");
                                         setStatusFilter("all");
                                         setRoleFilter("all");
+                                        setTenantFilter("all");
                                         setCityFilter("");
                                         setDateFilter("");
+                                        setDateRangeStart("");
+                                        setDateRangeEnd("");
                                     }}
                                 >
                                     <XCircle className="h-4 w-4 mr-2" />

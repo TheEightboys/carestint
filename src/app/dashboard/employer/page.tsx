@@ -196,9 +196,9 @@ export default function EmployerDashboardPage() {
                     </DropdownMenu>
                 </div>
             </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-4 md:gap-6">
+            <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-4 md:gap-6 safe-area-x">
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-4">
                     <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Stints</CardTitle>
@@ -242,27 +242,27 @@ export default function EmployerDashboardPage() {
                 </div>
 
                 <Tabs defaultValue="overview">
-                    <div className="flex items-center overflow-x-auto">
-                        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
-                            <TabsTrigger value="overview">
-                                <PlusCircle className="mr-2 h-4 w-4 hidden sm:block" />
-                                Post & Manage
+                    <div className="flex items-center overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+                        <TabsList className="inline-flex h-auto min-w-max gap-1 p-1 sm:grid sm:w-full sm:grid-cols-5 lg:w-auto">
+                            <TabsTrigger value="overview" className="touch-target px-3 py-2.5 text-xs sm:text-sm">
+                                <PlusCircle className="mr-1.5 h-4 w-4 sm:mr-2" />
+                                <span className="whitespace-nowrap">Post & Manage</span>
                             </TabsTrigger>
-                            <TabsTrigger value="messages">
-                                <MessageCircle className="mr-2 h-4 w-4 hidden sm:block" />
-                                Messages
+                            <TabsTrigger value="messages" className="touch-target px-3 py-2.5 text-xs sm:text-sm">
+                                <MessageCircle className="mr-1.5 h-4 w-4 sm:mr-2" />
+                                <span className="whitespace-nowrap">Messages</span>
                             </TabsTrigger>
-                            <TabsTrigger value="calculator">
-                                <Calculator className="mr-2 h-4 w-4 hidden sm:block" />
-                                Calculator
+                            <TabsTrigger value="calculator" className="touch-target px-3 py-2.5 text-xs sm:text-sm">
+                                <Calculator className="mr-1.5 h-4 w-4 sm:mr-2" />
+                                <span className="whitespace-nowrap">Calculator</span>
                             </TabsTrigger>
-                            <TabsTrigger value="invoices">
-                                <Receipt className="mr-2 h-4 w-4 hidden sm:block" />
-                                Invoices
+                            <TabsTrigger value="invoices" className="touch-target px-3 py-2.5 text-xs sm:text-sm">
+                                <Receipt className="mr-1.5 h-4 w-4 sm:mr-2" />
+                                <span className="whitespace-nowrap">Invoices</span>
                             </TabsTrigger>
-                            <TabsTrigger value="profile">
-                                <User className="mr-2 h-4 w-4 hidden sm:block" />
-                                Profile
+                            <TabsTrigger value="profile" className="touch-target px-3 py-2.5 text-xs sm:text-sm">
+                                <User className="mr-1.5 h-4 w-4 sm:mr-2" />
+                                <span className="whitespace-nowrap">Profile</span>
                             </TabsTrigger>
                         </TabsList>
                     </div>

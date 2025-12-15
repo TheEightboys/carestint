@@ -21,7 +21,7 @@ import {
   sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
-import { getEmployerByEmail, getProfessionalByEmail } from '@/lib/firebase/firestore';
+import { getEmployerByEmail, getProfessionalByEmail, getUserAccountByEmail } from '@/lib/firebase/firestore';
 
 export type UserType = 'employer' | 'professional';
 type AuthMode = 'signin' | 'signup' | 'verification-pending';
@@ -57,6 +57,36 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
     setIsLoading(true);
 
     try {
+      // Check if email is already registered with a different role
+      const existingUser = await getUserAccountByEmail(email);
+
+      if (existingUser) {
+        // Determine the existing user's role from their profiles
+        const hasEmployerRole = !!existingUser.employerId;
+        const hasProfessionalRole = !!existingUser.professionalId;
+        const existingRole = hasEmployerRole ? 'employer' : (hasProfessionalRole ? 'professional' : existingUser.activeRole);
+
+        if (existingRole && existingRole !== userType) {
+          const roleLabel = existingRole === 'employer' ? 'an Employer' : 'a Healthcare Professional';
+          toast({
+            variant: 'destructive',
+            title: 'Email already registered',
+            description: `This email is already registered as ${roleLabel}. Please sign in as ${roleLabel} instead, or use a different email.`,
+          });
+          setIsLoading(false);
+          return;
+        } else {
+          // Same role - they should login instead
+          toast({
+            variant: 'destructive',
+            title: 'Account exists',
+            description: 'An account with this email already exists. Please sign in instead.',
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
       // Update profile with display name
@@ -107,6 +137,26 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
     setIsLoading(true);
 
     try {
+      // Check if user is registered with a different role before sign-in
+      const existingUser = await getUserAccountByEmail(email);
+
+      if (existingUser) {
+        const hasEmployerRole = !!existingUser.employerId;
+        const hasProfessionalRole = !!existingUser.professionalId;
+        const existingRole = hasEmployerRole ? 'employer' : (hasProfessionalRole ? 'professional' : existingUser.activeRole);
+
+        if (existingRole && existingRole !== userType) {
+          const roleLabel = existingRole === 'employer' ? 'an Employer' : 'a Healthcare Professional';
+          toast({
+            variant: 'destructive',
+            title: 'Wrong account type',
+            description: `This email is registered as ${roleLabel}. Please sign in as ${roleLabel} instead.`,
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
       // Check if email is verified

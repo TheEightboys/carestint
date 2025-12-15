@@ -206,9 +206,9 @@ export default function ProfessionalDashboardPage() {
                     </DropdownMenu>
                 </div>
             </header>
-            <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-4 md:gap-6">
+            <main className="flex flex-1 flex-col gap-3 p-4 sm:px-6 sm:py-4 sm:gap-4 md:gap-6 safe-area-x">
                 {/* Stats Cards */}
-                <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+                <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-4">
                     <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Applications</CardTitle>
@@ -252,39 +252,39 @@ export default function ProfessionalDashboardPage() {
                 </div>
 
                 <Tabs defaultValue="active-stint">
-                    <div className="flex items-center overflow-x-auto">
-                        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
-                            <TabsTrigger value="active-stint">
-                                <Timer className="mr-2 h-4 w-4 hidden sm:block" />
-                                Active
+                    <div className="flex items-center overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
+                        <TabsList className="inline-flex h-auto min-w-max gap-1 p-1 sm:grid sm:w-full sm:grid-cols-8 lg:w-auto">
+                            <TabsTrigger value="active-stint" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <Timer className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Active</span>
                             </TabsTrigger>
-                            <TabsTrigger value="find-stints">
-                                <Briefcase className="mr-2 h-4 w-4 hidden sm:block" />
-                                Find
+                            <TabsTrigger value="find-stints" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <Briefcase className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Find</span>
                             </TabsTrigger>
-                            <TabsTrigger value="applications">
-                                <FileText className="mr-2 h-4 w-4 hidden sm:block" />
-                                Applied
+                            <TabsTrigger value="applications" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <FileText className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Applied</span>
                             </TabsTrigger>
-                            <TabsTrigger value="calculator">
-                                <Calculator className="mr-2 h-4 w-4 hidden sm:block" />
-                                Calculator
+                            <TabsTrigger value="calculator" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <Calculator className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Calc</span>
                             </TabsTrigger>
-                            <TabsTrigger value="earnings">
-                                <Wallet className="mr-2 h-4 w-4 hidden sm:block" />
-                                Earnings
+                            <TabsTrigger value="earnings" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <Wallet className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Earnings</span>
                             </TabsTrigger>
-                            <TabsTrigger value="availability">
-                                <Calendar className="mr-2 h-4 w-4 hidden sm:block" />
-                                Availability
+                            <TabsTrigger value="availability" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <Calendar className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Avail</span>
                             </TabsTrigger>
-                            <TabsTrigger value="messages">
-                                <MessageCircle className="mr-2 h-4 w-4 hidden sm:block" />
-                                Messages
+                            <TabsTrigger value="messages" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <MessageCircle className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Msgs</span>
                             </TabsTrigger>
-                            <TabsTrigger value="profile">
-                                <User className="mr-2 h-4 w-4 hidden sm:block" />
-                                Profile
+                            <TabsTrigger value="profile" className="touch-target px-3 py-2 text-xs sm:text-sm">
+                                <User className="mr-1.5 h-4 w-4" />
+                                <span className="whitespace-nowrap">Profile</span>
                             </TabsTrigger>
                         </TabsList>
                     </div>
