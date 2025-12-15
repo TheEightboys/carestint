@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShieldCheck, List, Loader2, ArrowLeft } from "lucide-react";
+import { ShieldCheck, List, Loader2, ArrowLeft, AlertTriangle, RefreshCw, Building } from "lucide-react";
 import { getAllEmployers } from "@/lib/firebase/firestore";
 import { EmployerReviewClientPage } from "@/components/dashboard/superadmin/employer-review-client-page";
 import {
@@ -17,18 +17,23 @@ import { Button } from "@/components/ui/button";
 export default function SuperAdminEmployersPage() {
   const [employers, setEmployers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadEmployers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getAllEmployers();
+      setEmployers(data || []);
+    } catch (err) {
+      console.error("Error loading employers:", err);
+      setError("Failed to load employers. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadEmployers = async () => {
-      try {
-        const data = await getAllEmployers();
-        setEmployers(data);
-      } catch (error) {
-        console.error("Error loading employers:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadEmployers();
   }, []);
 
@@ -47,6 +52,12 @@ export default function SuperAdminEmployersPage() {
             Manage Employers
           </h1>
         </div>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" onClick={loadEmployers} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
         <div className="grid gap-4">
@@ -63,6 +74,18 @@ export default function SuperAdminEmployersPage() {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Loading employers...</span>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                  <AlertTriangle className="h-10 w-10 text-destructive" />
+                  <p className="text-destructive">{error}</p>
+                  <Button onClick={loadEmployers}>Try Again</Button>
+                </div>
+              ) : employers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4 border-2 border-dashed rounded-lg">
+                  <Building className="h-12 w-12 text-muted-foreground/30" />
+                  <p className="text-muted-foreground font-medium">No employers registered yet</p>
+                  <p className="text-sm text-muted-foreground">Employers will appear here once they sign up and complete onboarding.</p>
                 </div>
               ) : (
                 <EmployerReviewClientPage employers={employers} />

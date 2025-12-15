@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShieldCheck, List, Loader2, ArrowLeft } from "lucide-react";
+import { ShieldCheck, List, Loader2, ArrowLeft, AlertTriangle, RefreshCw, Users } from "lucide-react";
 import { getAllProfessionals } from "@/lib/firebase/firestore";
 import { ProfessionalReviewClientPage } from "@/components/dashboard/superadmin/professional-review-client-page";
 import {
@@ -17,18 +17,23 @@ import { Button } from "@/components/ui/button";
 export default function SuperAdminProfessionalsPage() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadProfessionals = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getAllProfessionals();
+      setProfessionals(data || []);
+    } catch (err) {
+      console.error("Error loading professionals:", err);
+      setError("Failed to load professionals. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadProfessionals = async () => {
-      try {
-        const data = await getAllProfessionals();
-        setProfessionals(data);
-      } catch (error) {
-        console.error("Error loading professionals:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadProfessionals();
   }, []);
 
@@ -47,6 +52,12 @@ export default function SuperAdminProfessionalsPage() {
             Manage Professionals
           </h1>
         </div>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" onClick={loadProfessionals} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
         <div className="grid gap-4">
@@ -63,6 +74,18 @@ export default function SuperAdminProfessionalsPage() {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground">Loading professionals...</span>
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                  <AlertTriangle className="h-10 w-10 text-destructive" />
+                  <p className="text-destructive">{error}</p>
+                  <Button onClick={loadProfessionals}>Try Again</Button>
+                </div>
+              ) : professionals.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-4 border-2 border-dashed rounded-lg">
+                  <Users className="h-12 w-12 text-muted-foreground/30" />
+                  <p className="text-muted-foreground font-medium">No professionals registered yet</p>
+                  <p className="text-sm text-muted-foreground">Professionals will appear here once they sign up and complete onboarding.</p>
                 </div>
               ) : (
                 <ProfessionalReviewClientPage professionals={professionals} />

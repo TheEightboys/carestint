@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ClipboardList, Filter, Search, User, Clock, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, ClipboardList, Filter, Search, User, Clock, FileText, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,18 +35,23 @@ import { getRecentAuditLogs } from "@/lib/firebase/firestore";
 export default function AuditPage() {
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const logs = await getRecentAuditLogs(100);
+            setAuditLogs(logs || []);
+        } catch (err) {
+            console.error("Error loading audit logs:", err);
+            setError("Failed to load audit logs. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const logs = await getRecentAuditLogs(100);
-                setAuditLogs(logs);
-            } catch (error) {
-                console.error("Error loading audit logs:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         loadData();
     }, []);
 
@@ -82,6 +87,16 @@ export default function AuditPage() {
         );
     }
 
+    if (error) {
+        return (
+            <div className="flex min-h-screen w-full items-center justify-center flex-col gap-4">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <p className="text-destructive">{error}</p>
+                <Button onClick={loadData}>Try Again</Button>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -95,6 +110,12 @@ export default function AuditPage() {
                     <ClipboardList className="h-5 w-5" />
                     Audit Log
                 </h1>
+                <div className="ml-auto">
+                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
             </header>
 
             <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">

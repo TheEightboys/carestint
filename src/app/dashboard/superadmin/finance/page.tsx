@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, DollarSign, Receipt, TrendingUp, Wallet, Loader2 } from "lucide-react";
+import { ArrowLeft, CreditCard, DollarSign, Receipt, TrendingUp, Wallet, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,22 +28,27 @@ export default function FinancePage() {
     const [stats, setStats] = useState({ grossVolume: 0, platformRevenue: 0 });
     const [payouts, setPayouts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const [statsData, payoutsData] = await Promise.all([
+                getDashboardStats().catch(() => ({ grossVolume: 0, platformRevenue: 0 })),
+                getAllPayouts().catch(() => []),
+            ]);
+            setStats(statsData || { grossVolume: 0, platformRevenue: 0 });
+            setPayouts(payoutsData || []);
+        } catch (err) {
+            console.error("Error loading finance data:", err);
+            setError("Failed to load finance data. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [statsData, payoutsData] = await Promise.all([
-                    getDashboardStats(),
-                    getAllPayouts(),
-                ]);
-                setStats(statsData);
-                setPayouts(payoutsData);
-            } catch (error) {
-                console.error("Error loading finance data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
         loadData();
     }, []);
 
@@ -51,6 +56,16 @@ export default function FinancePage() {
         return (
             <div className="flex min-h-screen w-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex min-h-screen w-full items-center justify-center flex-col gap-4">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <p className="text-destructive">{error}</p>
+                <Button onClick={loadData}>Try Again</Button>
             </div>
         );
     }
@@ -67,6 +82,12 @@ export default function FinancePage() {
                 <h1 className="font-headline text-xl font-semibold">
                     Finance & Billing
                 </h1>
+                <div className="ml-auto">
+                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                </div>
             </header>
 
             <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">

@@ -71,6 +71,7 @@ export default function StintsPage() {
         flaggedStints: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("all");
 
     // Filters
@@ -123,23 +124,36 @@ export default function StintsPage() {
     }, []);
 
     const loadData = async () => {
+        setLoadError(null);
         try {
             const [stintsData, statsData, employersData] = await Promise.all([
-                getAllStints(),
-                getDashboardStats(),
-                getAllEmployers(),
+                getAllStints().catch(() => []),
+                getDashboardStats().catch(() => ({
+                    totalStints: 0,
+                    activeStints: 0,
+                    disputedStints: 0,
+                    flaggedStints: 0,
+                })),
+                getAllEmployers().catch(() => []),
             ]);
-            setStints(stintsData);
-            setStats(statsData);
-            setEmployers(employersData);
+            setStints(stintsData || []);
+            setStats(statsData || {
+                totalStints: 0,
+                activeStints: 0,
+                disputedStints: 0,
+                flaggedStints: 0,
+            });
+            setEmployers(employersData || []);
         } catch (error) {
             console.error("Error loading stints data:", error);
+            setLoadError("Failed to load stints data. Please try refreshing the page.");
         } finally {
             setIsLoading(false);
         }
     };
 
     const filteredStints = useMemo(() => {
+        if (!stints || !Array.isArray(stints)) return [];
         let filtered = filterStintsByTab(stints, activeTab, 'superadmin');
 
         // Apply search filter
@@ -199,11 +213,15 @@ export default function StintsPage() {
 
     // Unique cities for filter dropdown
     const uniqueCities = useMemo(() => {
+        if (!stints || !Array.isArray(stints)) return [];
         const cities = new Set(stints.map(s => s.city).filter(Boolean));
         return Array.from(cities).sort();
     }, [stints]);
 
-    const tabCounts = useMemo(() => getStintCountByTab(stints, 'superadmin'), [stints]);
+    const tabCounts = useMemo(() => {
+        if (!stints || !Array.isArray(stints)) return {};
+        return getStintCountByTab(stints, 'superadmin');
+    }, [stints]);
 
     const handleExpandRow = async (stintId: string) => {
         if (expandedRowId === stintId) {
@@ -419,6 +437,16 @@ export default function StintsPage() {
         return (
             <div className="flex min-h-screen w-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="flex min-h-screen w-full items-center justify-center flex-col gap-4">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <p className="text-destructive">{loadError}</p>
+                <Button onClick={loadData}>Try Again</Button>
             </div>
         );
     }
