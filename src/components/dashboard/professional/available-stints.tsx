@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -14,10 +14,18 @@ import { Input } from "@/components/ui/input";
 import {
   Search, MapPin, Clock, Briefcase, FileText, Loader2,
   RefreshCw, DollarSign, AlertCircle, CheckCircle, Filter,
-  SlidersHorizontal, X, Eye
+  SlidersHorizontal, X, Eye, Navigation, MapPinOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getOpenStints, addStintApplication, getApplicationsByProfessional } from "@/lib/firebase/firestore";
+import {
+  getCurrentLocation,
+  getCityCoordinates,
+  calculateDistance,
+  formatDistance,
+  DISTANCE_THRESHOLDS,
+  type Coordinates
+} from "@/lib/geocoding";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -60,6 +68,7 @@ interface Filters {
   shiftType: 'all' | 'full-day' | 'half-day';
   profession: string;
   city: string;
+  distance: 'any' | 'near' | '20km' | '50km';
 }
 
 const PROFESSIONS = [
@@ -73,17 +82,57 @@ const PROFESSIONS = [
   { value: 'radiographer', label: 'Radiographer' },
 ];
 
+// Comprehensive list of East African cities and towns
 const CITIES = [
   'All Cities',
+  // Kenya - Major Cities
   'Nairobi',
   'Mombasa',
   'Kisumu',
   'Eldoret',
   'Nakuru',
   'Thika',
+  // Kenya - Other Towns
   'Malindi',
   'Nyeri',
   'Machakos',
+  'Kisii',
+  'Kitale',
+  'Naivasha',
+  'Nanyuki',
+  'Garissa',
+  'Kakamega',
+  'Meru',
+  'Kericho',
+  'Embu',
+  'Migori',
+  'Bungoma',
+  'Kiambu',
+  'Ruiru',
+  // Uganda
+  'Kampala',
+  'Entebbe',
+  'Jinja',
+  'Mbarara',
+  'Gulu',
+  // Tanzania
+  'Dar es Salaam',
+  'Arusha',
+  'Mwanza',
+  'Dodoma',
+  'Zanzibar',
+  // Rwanda
+  'Kigali',
+  'Butare',
+  // Other
+  'Other',
+];
+
+const DISTANCE_OPTIONS = [
+  { value: 'any', label: 'Any Distance' },
+  { value: 'near', label: 'Near Me (< 10km)' },
+  { value: '20km', label: 'Within 20km' },
+  { value: '50km', label: 'Within 50km' },
 ];
 
 export function AvailableStints({
@@ -109,8 +158,15 @@ export function AvailableStints({
     shiftType: 'all',
     profession: 'all',
     city: 'All Cities',
+    distance: 'any',
   });
   const [activeFilterCount, setActiveFilterCount] = useState(0);
+
+  // GPS Location state
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [stintsWithDistance, setStintsWithDistance] = useState<any[]>([]);
 
   const loadStints = async () => {
     setIsLoading(true);
@@ -137,9 +193,67 @@ export function AvailableStints({
     }
   };
 
+  // Fetch user's GPS location
+  const fetchUserLocation = useCallback(async () => {
+    setIsLocating(true);
+    setLocationError(null);
+
+    const location = await getCurrentLocation();
+
+    if (location) {
+      setUserLocation(location);
+      toast({
+        title: "Location updated",
+        description: "Stints will now show distances from your location",
+      });
+    } else {
+      setLocationError("Unable to get your location. Please enable location services.");
+      toast({
+        title: "Location unavailable",
+        description: "Enable location services to see distance-based filtering",
+        variant: "destructive",
+      });
+    }
+
+    setIsLocating(false);
+  }, [toast]);
+
   useEffect(() => {
     loadStints();
   }, [professionalId]);
+
+  // Calculate distances when stints or user location changes
+  useEffect(() => {
+    if (!stints.length) {
+      setStintsWithDistance([]);
+      return;
+    }
+
+    const stintsWithDist = stints.map(stint => {
+      if (!userLocation) {
+        return { ...stint, distance: null };
+      }
+
+      const stintCoords = getCityCoordinates(stint.city);
+      if (!stintCoords) {
+        return { ...stint, distance: null };
+      }
+
+      const distance = calculateDistance(userLocation, stintCoords);
+      return { ...stint, distance };
+    });
+
+    // Sort by distance if user location is available
+    if (userLocation) {
+      stintsWithDist.sort((a, b) => {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    }
+
+    setStintsWithDistance(stintsWithDist);
+  }, [stints, userLocation]);
 
   // Update active filter count
   useEffect(() => {
@@ -148,6 +262,7 @@ export function AvailableStints({
     if (filters.shiftType !== 'all') count++;
     if (filters.profession !== 'all') count++;
     if (filters.city !== 'All Cities') count++;
+    if (filters.distance !== 'any') count++;
     setActiveFilterCount(count);
   }, [filters]);
 
@@ -191,10 +306,14 @@ export function AvailableStints({
       shiftType: 'all',
       profession: 'all',
       city: 'All Cities',
+      distance: 'any',
     });
   };
 
-  const filteredStints = stints.filter((stint) => {
+  // Use stintsWithDistance if available, otherwise use stints
+  const baseStints = stintsWithDistance.length > 0 ? stintsWithDistance : stints;
+
+  const filteredStints = baseStints.filter((stint) => {
     // Search query filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -223,6 +342,14 @@ export function AvailableStints({
     // City filter
     if (filters.city !== 'All Cities' && stint.city !== filters.city) {
       return false;
+    }
+
+    // Distance filter (only apply if user location is available)
+    if (filters.distance !== 'any' && userLocation) {
+      const maxDistance = DISTANCE_THRESHOLDS[filters.distance as keyof typeof DISTANCE_THRESHOLDS];
+      if (stint.distance !== null && stint.distance > maxDistance) {
+        return false;
+      }
     }
 
     return true;
@@ -254,9 +381,42 @@ export function AvailableStints({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Location Status Banner */}
+          {userLocation ? (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <Navigation className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-green-700 dark:text-green-400">
+                Location active - showing distances from your position
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7 text-xs"
+                onClick={fetchUserLocation}
+                disabled={isLocating}
+              >
+                {isLocating ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Update'}
+              </Button>
+            </div>
+          ) : locationError ? (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <MapPinOff className="h-4 w-4 text-destructive" />
+              <span className="text-sm text-destructive">{locationError}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto h-7 text-xs"
+                onClick={fetchUserLocation}
+                disabled={isLocating}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : null}
+
           {/* Search and Filters Row */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          <div className="flex gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Search by role, city, or facility name..."
@@ -265,6 +425,22 @@ export function AvailableStints({
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            {/* Get My Location Button */}
+            <Button
+              variant={userLocation ? "secondary" : "outline"}
+              onClick={fetchUserLocation}
+              disabled={isLocating}
+              className="shrink-0"
+            >
+              {isLocating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : userLocation ? (
+                <Navigation className="h-4 w-4 mr-2 text-green-500" />
+              ) : (
+                <MapPin className="h-4 w-4 mr-2" />
+              )}
+              {userLocation ? 'Located' : 'My Location'}
+            </Button>
             <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="relative">
@@ -370,6 +546,31 @@ export function AvailableStints({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <Separator />
+
+                  {/* Distance Filter */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Distance Preference</Label>
+                    <Select
+                      value={filters.distance}
+                      onValueChange={(value: any) => setFilters(prev => ({ ...prev, distance: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select distance" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DISTANCE_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Note: Distance filtering requires location services to be fully functional.
+                    </p>
+                  </div>
                 </div>
 
                 <SheetFooter className="flex gap-2">
@@ -424,6 +625,15 @@ export function AvailableStints({
                   />
                 </Badge>
               )}
+              {filters.distance !== 'any' && (
+                <Badge variant="secondary" className="gap-1">
+                  {DISTANCE_OPTIONS.find(d => d.value === filters.distance)?.label}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => setFilters(prev => ({ ...prev, distance: 'any' }))}
+                  />
+                </Badge>
+              )}
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 text-xs">
                 Clear all
               </Button>
@@ -463,6 +673,18 @@ export function AvailableStints({
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
                     <span>{stint.city || 'Location TBD'}</span>
+                    {stint.distance !== null && stint.distance !== undefined && (
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${stint.distance < 10 ? 'border-green-500 text-green-600' :
+                            stint.distance < 30 ? 'border-yellow-500 text-yellow-600' :
+                              'border-muted-foreground'
+                          }`}
+                      >
+                        <Navigation className="h-3 w-3 mr-1" />
+                        {formatDistance(stint.distance)}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-4 w-4" />

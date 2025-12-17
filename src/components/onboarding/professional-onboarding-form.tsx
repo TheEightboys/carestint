@@ -11,8 +11,9 @@ import { Progress } from '@/components/ui/progress';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Copy, CheckCircle, Camera, ExternalLink } from 'lucide-react';
 import { CameraCapture } from './camera-capture';
 import { addProfessional } from '@/lib/firebase/firestore';
 
@@ -51,13 +52,16 @@ export function ProfessionalOnboardingForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
 
-  // Redirect after successful submission
+  // Redirect after successful submission - show verification first
   useEffect(() => {
     if (isSubmitted) {
+      // Show verification prompt first, then redirect after delay
+      setShowVerificationPrompt(true);
       const timer = setTimeout(() => {
         window.location.href = '/dashboard/professional';
-      }, 1000);
+      }, 8000); // Give user time to read verification info
       return () => clearTimeout(timer);
     }
   }, [isSubmitted]);
@@ -96,18 +100,32 @@ export function ProfessionalOnboardingForm() {
   const handlePrev = () => {
     setCurrentStep(prev => prev - 1);
   };
+  const [verificationLink, setVerificationLink] = useState<string | null>(null);
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setIsLoading(true);
     try {
       // Images are now compressed in CameraCapture component
       // Safe to store directly in Firestore
-      await addProfessional(data);
+      const professionalId = await addProfessional(data);
+
+      // Generate verification token for identity verification
+      if (professionalId) {
+        const { generateVerificationToken } = await import('@/lib/firebase/firestore');
+        const token = await generateVerificationToken(professionalId);
+        if (token) {
+          // Create verification link
+          const link = `${window.location.origin}/verify/${token}`;
+          setVerificationLink(link);
+          console.log('Verification link generated:', link);
+        }
+      }
+
       toast({
         title: "Profile submitted!",
-        description: "Your details are now under review. We'll notify you once approved. Redirecting to dashboard...",
+        description: "Please complete identity verification to finish your registration.",
       });
-      // Trigger redirect via useEffect
+      // Trigger redirect via useEffect - show verification step first
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error submitting professional profile:", error);
@@ -119,6 +137,92 @@ export function ProfessionalOnboardingForm() {
       setIsLoading(false);
     }
   };
+
+  const copyVerificationLink = () => {
+    if (verificationLink) {
+      navigator.clipboard.writeText(verificationLink);
+      toast({
+        title: "Link copied!",
+        description: "Paste this link in your browser to complete verification.",
+      });
+    }
+  };
+
+  // Show verification success screen
+  if (showVerificationPrompt) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardHeader className="text-center pb-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl font-headline">Profile Submitted!</CardTitle>
+            <CardDescription>
+              One more step: Complete your identity verification
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-start gap-3">
+                <Camera className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                    Identity Verification Required
+                  </h4>
+                  <p className="text-sm text-amber-600 dark:text-amber-400/80">
+                    Take a selfie while holding your ID next to your face. This helps us verify your identity and is required before account approval.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {verificationLink && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground text-center">
+                  Click the button below to complete verification now, or copy the link to do it later:
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => window.location.href = verificationLink}
+                    className="flex-1"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Verify Now
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={copyVerificationLink}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="p-2 bg-muted rounded-md">
+                  <code className="text-xs break-all text-muted-foreground">
+                    {verificationLink}
+                  </code>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center pt-2">
+              <Button
+                variant="ghost"
+                onClick={() => window.location.href = '/dashboard/professional'}
+                className="text-muted-foreground"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Skip for now - Go to Dashboard
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                You can complete verification later from your dashboard
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

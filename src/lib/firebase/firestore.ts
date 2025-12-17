@@ -515,6 +515,71 @@ export const getProfessionalsByStatus = async (status: string) => {
     }
 }
 
+// Generate a verification token for a professional
+export const generateVerificationToken = async (professionalId: string): Promise<string | null> => {
+    const firestore = getDb();
+    try {
+        // Generate a unique token
+        const token = `${professionalId}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+        const docRef = doc(firestore, 'professionals', professionalId);
+        await updateDoc(docRef, {
+            verificationToken: token,
+            verificationTokenCreatedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        return token;
+    } catch (error) {
+        console.error("Error generating verification token:", error);
+        return null;
+    }
+}
+
+// Get professional by verification token
+export const getProfessionalByVerificationToken = async (token: string) => {
+    const firestore = getDb();
+    try {
+        const q = query(collection(firestore, 'professionals'), where('verificationToken', '==', token));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() };
+        }
+        return null;
+    } catch (error) {
+        console.error("Error getting professional by verification token:", error);
+        return null;
+    }
+}
+
+// Update professional's verification packet (selfie + ID image)
+export const updateProfessionalVerificationPacket = async (professionalId: string, imageData: string): Promise<boolean> => {
+    const firestore = getDb();
+    try {
+        const docRef = doc(firestore, 'professionals', professionalId);
+        await updateDoc(docRef, {
+            verificationPacket: imageData,
+            verificationSubmittedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        await addAuditLog({
+            actorType: 'professional',
+            actorId: professionalId,
+            entityType: 'professional',
+            entityId: professionalId,
+            action: 'VERIFICATION_SUBMITTED' as any,
+            description: 'Professional submitted identity verification selfie',
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Error updating professional verification packet:", error);
+        return false;
+    }
+}
+
 // =============================================
 // STINT SERVICES
 // =============================================

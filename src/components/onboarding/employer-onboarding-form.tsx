@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { CameraCapture } from './camera-capture';
-import { addEmployer } from '@/lib/firebase/firestore';
+import { addEmployer, getEmployerByEmail } from '@/lib/firebase/firestore';
+import { useUser } from '@/lib/user-context';
 
 const formSchema = z.object({
   facilityName: z.string().min(2, "Facility name is required"),
@@ -44,9 +45,45 @@ export function EmployerOnboardingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
+
+  // Check if user already has employer data - redirect to dashboard if so
+  useEffect(() => {
+    const checkExistingEmployer = async () => {
+      if (authLoading) return;
+
+      // Get email from user or search params
+      const email = user?.email || searchParams.get('email');
+
+      if (!email) {
+        setCheckingExisting(false);
+        return;
+      }
+
+      try {
+        const existingEmployer = await getEmployerByEmail(email);
+        if (existingEmployer) {
+          // User already has employer data, redirect to dashboard
+          toast({
+            title: "Welcome back!",
+            description: "Your facility account already exists. Redirecting to dashboard...",
+          });
+          window.location.href = '/dashboard/employer';
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking existing employer:', error);
+      } finally {
+        setCheckingExisting(false);
+      }
+    };
+
+    checkExistingEmployer();
+  }, [authLoading, user, searchParams, toast]);
 
   // Redirect after successful submission
   useEffect(() => {
@@ -112,6 +149,16 @@ export function EmployerOnboardingForm() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking for existing account
+  if (authLoading || checkingExisting) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Checking your account status...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

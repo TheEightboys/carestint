@@ -16,10 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateProfessionalStatus } from '@/lib/firebase/firestore';
-import { Loader2, Check, X, User, Mail, Phone, MapPin, Star, Briefcase, BadgeDollarSign, ShieldCheck, Image as ImageIcon, ArrowLeft, Ban, ShieldOff } from "lucide-react";
+import { Loader2, Check, X, User, Mail, Phone, MapPin, Star, Briefcase, BadgeDollarSign, ShieldCheck, Image as ImageIcon, ArrowLeft, Ban, ShieldOff, Settings2, Camera } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { SuspensionModal } from './suspension-modal';
+import { StatusChangeModal } from './status-change-modal';
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" } = {
   active: "default",
@@ -54,6 +55,7 @@ export function ProfessionalReviewClientPage({ professionals: initialProfessiona
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -167,6 +169,59 @@ export function ProfessionalReviewClientPage({ professionals: initialProfessiona
       });
     }
     setIsLoading(false);
+  };
+
+  const handleStatusChange = async (newStatus: string, reason?: string) => {
+    if (!selectedProfessional) return;
+    setIsLoading(true);
+
+    const additionalData: any = {};
+    if (reason) {
+      if (newStatus === 'rejected') {
+        additionalData.rejectionReason = reason;
+      } else if (newStatus === 'suspended') {
+        additionalData.suspensionReason = reason;
+        additionalData.suspendedAt = new Date();
+      }
+    }
+
+    // Clear suspension data when moving to non-suspended status
+    if (newStatus !== 'suspended') {
+      additionalData.suspensionDays = null;
+      additionalData.suspensionEndDate = null;
+      additionalData.suspensionReason = null;
+    }
+
+    const success = await updateProfessionalStatus(selectedProfessional.id, newStatus, additionalData);
+
+    if (success) {
+      const updatedProfessionals = professionals.map(p =>
+        p.id === selectedProfessional.id ? { ...p, status: newStatus, ...additionalData } : p
+      );
+      setProfessionals(updatedProfessionals);
+      setSelectedProfessional(updatedProfessionals.find(p => p.id === selectedProfessional.id));
+
+      const statusLabels: Record<string, string> = {
+        'pending_validation': 'Pending Review',
+        'active': 'Active (Approved)',
+        'rejected': 'Rejected',
+        'suspended': 'Suspended',
+      };
+
+      toast({
+        title: 'Status Updated',
+        description: `Professional status changed to ${statusLabels[newStatus] || newStatus}.`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not update the professional's status. Please try again.",
+      });
+    }
+
+    setIsLoading(false);
+    setShowStatusChangeModal(false);
   };
 
   const getRoleDisplayName = (roleKey: string) => {
@@ -322,41 +377,77 @@ export function ProfessionalReviewClientPage({ professionals: initialProfessiona
                       </div>
                     </div>
                   )}
+                  {selectedProfessional.verificationPacket && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Identity Verification (Selfie + ID)
+                      </h4>
+                      <div className="relative w-full aspect-video rounded-md border bg-secondary overflow-hidden">
+                        <Image src={selectedProfessional.verificationPacket} alt="Verification selfie with ID" fill className="object-contain" />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Action Buttons */}
-                {selectedProfessional.status === 'pending_validation' && (
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleStatusUpdate(selectedProfessional.id, 'active')} disabled={isLoading} className="w-full">
-                      {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2" />} Approve
-                    </Button>
-                    <Button onClick={() => handleStatusUpdate(selectedProfessional.id, 'rejected')} disabled={isLoading} variant="destructive" className="w-full">
-                      {isLoading ? <Loader2 className="animate-spin" /> : <X className="mr-2" />} Reject
-                    </Button>
-                  </div>
-                )}
-
-                {selectedProfessional.status === 'active' && (
+                {/* Action Buttons - All Statuses */}
+                <div className="space-y-2">
+                  {/* Change Status Button - Always visible */}
                   <Button
-                    onClick={() => setShowSuspensionModal(true)}
+                    onClick={() => setShowStatusChangeModal(true)}
                     disabled={isLoading}
-                    variant="destructive"
+                    variant="outline"
                     className="w-full"
                   >
-                    <Ban className="mr-2 h-4 w-4" /> Suspend Account
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Change Status
                   </Button>
-                )}
 
-                {(selectedProfessional.status === 'suspended' || selectedProfessional.status === 'suspended_due_to_expiry') && (
-                  <Button
-                    onClick={handleUnsuspend}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    {isLoading ? <Loader2 className="animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
-                    Unsuspend Account
-                  </Button>
-                )}
+                  {/* Quick Actions based on status */}
+                  {selectedProfessional.status === 'pending_validation' && (
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleStatusUpdate(selectedProfessional.id, 'active')} disabled={isLoading} className="w-full">
+                        {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2" />} Approve
+                      </Button>
+                      <Button onClick={() => handleStatusUpdate(selectedProfessional.id, 'rejected')} disabled={isLoading} variant="destructive" className="w-full">
+                        {isLoading ? <Loader2 className="animate-spin" /> : <X className="mr-2" />} Reject
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedProfessional.status === 'active' && (
+                    <Button
+                      onClick={() => setShowSuspensionModal(true)}
+                      disabled={isLoading}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      <Ban className="mr-2 h-4 w-4" /> Suspend Account
+                    </Button>
+                  )}
+
+                  {(selectedProfessional.status === 'suspended' || selectedProfessional.status === 'suspended_due_to_expiry') && (
+                    <Button
+                      onClick={handleUnsuspend}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? <Loader2 className="animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
+                      Unsuspend Account
+                    </Button>
+                  )}
+
+                  {selectedProfessional.status === 'rejected' && (
+                    <Button
+                      onClick={() => handleStatusChange('active')}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                      Re-approve Account
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -366,6 +457,17 @@ export function ProfessionalReviewClientPage({ professionals: initialProfessiona
           )}
         </div>
       </div>
+
+      {/* Status Change Modal */}
+      <StatusChangeModal
+        open={showStatusChangeModal}
+        onClose={() => setShowStatusChangeModal(false)}
+        onConfirm={handleStatusChange}
+        entityType="professional"
+        entityName={selectedProfessional?.fullName || ''}
+        currentStatus={selectedProfessional?.status || 'pending_validation'}
+        isLoading={isLoading}
+      />
 
       {/* Suspension Modal */}
       <SuspensionModal

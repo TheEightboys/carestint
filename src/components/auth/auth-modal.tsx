@@ -105,7 +105,7 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
 
       toast({
         title: 'Verification email sent!',
-        description: 'Please check your inbox and verify your email to continue.',
+        description: 'Please check your inbox (and spam/junk folder) and verify your email to continue.',
       });
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -372,6 +372,11 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
                 <p className="text-sm text-muted-foreground max-w-xs">
                   Click the verification link in your email, then come back here and click "Continue" to complete your profile.
                 </p>
+                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 max-w-xs">
+                  <p className="text-xs font-medium">
+                    📌 Can't find the email? Check your <strong>Spam</strong> or <strong>Junk</strong> folder!
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3">

@@ -16,10 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateEmployerStatus } from '@/lib/firebase/firestore';
-import { Loader2, Check, X, Building, Mail, Phone, MapPin, Calendar, Users, FileDigit, Image as ImageIcon, ArrowLeft, Ban, ShieldOff } from "lucide-react";
+import { Loader2, Check, X, Building, Mail, Phone, MapPin, Calendar, Users, FileDigit, Image as ImageIcon, ArrowLeft, Ban, ShieldOff, Settings2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { SuspensionModal } from './suspension-modal';
+import { StatusChangeModal } from './status-change-modal';
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" } = {
   active: "default",
@@ -54,6 +55,7 @@ export function EmployerReviewClientPage({ employers: initialEmployers }: { empl
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -168,6 +170,59 @@ export function EmployerReviewClientPage({ employers: initialEmployers }: { empl
       });
     }
     setIsLoading(false);
+  };
+
+  const handleStatusChange = async (newStatus: string, reason?: string) => {
+    if (!selectedEmployer) return;
+    setIsLoading(true);
+
+    const additionalData: any = {};
+    if (reason) {
+      if (newStatus === 'rejected') {
+        additionalData.rejectionReason = reason;
+      } else if (newStatus === 'suspended') {
+        additionalData.suspensionReason = reason;
+        additionalData.suspendedAt = new Date();
+      }
+    }
+
+    // Clear suspension data when moving to non-suspended status
+    if (newStatus !== 'suspended') {
+      additionalData.suspensionDays = null;
+      additionalData.suspensionEndDate = null;
+      additionalData.suspensionReason = null;
+    }
+
+    const success = await updateEmployerStatus(selectedEmployer.id, newStatus, additionalData);
+
+    if (success) {
+      const updatedEmployers = employers.map(e =>
+        e.id === selectedEmployer.id ? { ...e, status: newStatus, ...additionalData } : e
+      );
+      setEmployers(updatedEmployers);
+      setSelectedEmployer(updatedEmployers.find(e => e.id === selectedEmployer.id));
+
+      const statusLabels: Record<string, string> = {
+        'pending_validation': 'Pending Review',
+        'active': 'Active (Approved)',
+        'rejected': 'Rejected',
+        'suspended': 'Suspended',
+      };
+
+      toast({
+        title: 'Status Updated',
+        description: `Employer status changed to ${statusLabels[newStatus] || newStatus}.`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not update the employer's status. Please try again.",
+      });
+    }
+
+    setIsLoading(false);
+    setShowStatusChangeModal(false);
   };
 
   const getFilteredEmployers = (status: string) => {
@@ -299,39 +354,64 @@ export function EmployerReviewClientPage({ employers: initialEmployers }: { empl
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                {selectedEmployer.status === 'pending_validation' && (
-                  <div className="flex gap-2">
-                    <Button onClick={() => handleStatusUpdate(selectedEmployer.id, 'active')} disabled={isLoading} className="w-full">
-                      {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2" />} Approve
-                    </Button>
-                    <Button onClick={() => handleStatusUpdate(selectedEmployer.id, 'rejected')} disabled={isLoading} variant="destructive" className="w-full">
-                      {isLoading ? <Loader2 className="animate-spin" /> : <X className="mr-2" />} Reject
-                    </Button>
-                  </div>
-                )}
-
-                {selectedEmployer.status === 'active' && (
+                {/* Action Buttons - All Statuses */}
+                <div className="space-y-2">
+                  {/* Change Status Button - Always visible */}
                   <Button
-                    onClick={() => setShowSuspensionModal(true)}
+                    onClick={() => setShowStatusChangeModal(true)}
                     disabled={isLoading}
-                    variant="destructive"
+                    variant="outline"
                     className="w-full"
                   >
-                    <Ban className="mr-2 h-4 w-4" /> Suspend Account
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Change Status
                   </Button>
-                )}
 
-                {(selectedEmployer.status === 'suspended' || selectedEmployer.status === 'suspended_due_to_expiry') && (
-                  <Button
-                    onClick={handleUnsuspend}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    {isLoading ? <Loader2 className="animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
-                    Unsuspend Account
-                  </Button>
-                )}
+                  {/* Quick Actions based on status */}
+                  {selectedEmployer.status === 'pending_validation' && (
+                    <div className="flex gap-2">
+                      <Button onClick={() => handleStatusUpdate(selectedEmployer.id, 'active')} disabled={isLoading} className="w-full">
+                        {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2" />} Approve
+                      </Button>
+                      <Button onClick={() => handleStatusUpdate(selectedEmployer.id, 'rejected')} disabled={isLoading} variant="destructive" className="w-full">
+                        {isLoading ? <Loader2 className="animate-spin" /> : <X className="mr-2" />} Reject
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedEmployer.status === 'active' && (
+                    <Button
+                      onClick={() => setShowSuspensionModal(true)}
+                      disabled={isLoading}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      <Ban className="mr-2 h-4 w-4" /> Suspend Account
+                    </Button>
+                  )}
+
+                  {(selectedEmployer.status === 'suspended' || selectedEmployer.status === 'suspended_due_to_expiry') && (
+                    <Button
+                      onClick={handleUnsuspend}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? <Loader2 className="animate-spin" /> : <ShieldOff className="mr-2 h-4 w-4" />}
+                      Unsuspend Account
+                    </Button>
+                  )}
+
+                  {selectedEmployer.status === 'rejected' && (
+                    <Button
+                      onClick={() => handleStatusChange('active')}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? <Loader2 className="animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                      Re-approve Account
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -341,6 +421,17 @@ export function EmployerReviewClientPage({ employers: initialEmployers }: { empl
           )}
         </div>
       </div>
+
+      {/* Status Change Modal */}
+      <StatusChangeModal
+        open={showStatusChangeModal}
+        onClose={() => setShowStatusChangeModal(false)}
+        onConfirm={handleStatusChange}
+        entityType="employer"
+        entityName={selectedEmployer?.facilityName || ''}
+        currentStatus={selectedEmployer?.status || 'pending_validation'}
+        isLoading={isLoading}
+      />
 
       {/* Suspension Modal */}
       <SuspensionModal

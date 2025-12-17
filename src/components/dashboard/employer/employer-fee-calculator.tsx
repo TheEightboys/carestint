@@ -93,23 +93,23 @@ export function EmployerFeeCalculator({ className }: EmployerFeeCalculatorProps)
                         <span className="h-2 w-2 rounded-full bg-primary"></span>
                         Your Cost Breakdown
                     </h4>
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
+                    <div className="space-y-3 text-sm">
+                        <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Offered Rate to Professional</span>
-                            <span>{formatWithCurrency(offeredRate)}</span>
+                            <span className="font-medium">{formatWithCurrency(offeredRate)}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">
                                 Booking Fee ({bookingFee.percent}%)
-                                <span className="ml-1 text-xs text-muted-foreground">
+                                <span className="ml-1 text-xs">
                                     {isUrgent ? '(urgent)' : '(standard)'}
                                 </span>
                             </span>
-                            <span className="text-primary">+ {formatWithCurrency(bookingFee.amount)}</span>
+                            <span className="text-yellow-500 font-semibold text-base">+ {formatWithCurrency(bookingFee.amount)}</span>
                         </div>
-                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                            <span>Total Cost</span>
-                            <span className="text-primary">{formatWithCurrency(totalCost)}</span>
+                        <div className="flex justify-between items-center font-bold text-xl pt-3 mt-2 border-t-2 border-primary/30 bg-primary/10 -mx-4 px-4 py-3 rounded-b-lg">
+                            <span className="text-foreground">Total Cost</span>
+                            <span className="text-teal-400 text-2xl">{formatWithCurrency(totalCost)}</span>
                         </div>
                     </div>
                 </div>

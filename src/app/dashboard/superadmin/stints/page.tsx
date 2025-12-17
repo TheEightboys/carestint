@@ -589,13 +589,13 @@ export default function StintsPage() {
                                 </Select>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                                <Select value={cityFilter} onValueChange={setCityFilter}>
+                                <Select value={cityFilter || "all"} onValueChange={(v) => setCityFilter(v === "all" ? "" : v)}>
                                     <SelectTrigger>
                                         <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                                         <SelectValue placeholder="City" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">All Cities</SelectItem>
+                                        <SelectItem value="all">All Cities</SelectItem>
                                         {uniqueCities.map((city) => (
                                             <SelectItem key={city} value={city}>
                                                 {city}
