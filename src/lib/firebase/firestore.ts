@@ -2,7 +2,7 @@
 
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, updateDoc, orderBy, limit, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from './clientApp';
-import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType, ActiveRole, UserAccount, DualRoleInfo, EmployerStatus, ProfessionalStatus, Professional } from '@/lib/types';
+import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType, ActiveRole, UserAccount, DualRoleInfo, EmployerStatus, ProfessionalStatus, Professional, Employer } from '@/lib/types';
 
 // Helper function to get the Firestore instance
 const getDb = () => {
@@ -274,13 +274,13 @@ export const getAllEmployers = async () => {
     }
 }
 
-export const getEmployerById = async (id: string) => {
+export const getEmployerById = async (id: string): Promise<Employer | null> => {
     const firestore = getDb();
     try {
         const docRef = doc(firestore, 'employers', id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() };
+            return { id: docSnap.id, ...docSnap.data() } as Employer;
         }
         return null;
     } catch (error) {

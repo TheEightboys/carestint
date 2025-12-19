@@ -81,7 +81,7 @@ export function Terms() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">15% booking fee</p>
-                  <p>Charged at confirmation. Urgent (&lt;12h) shifts incur 20%.</p>
+                  <p>Charged at confirmation. Urgent (&lt;24h) shifts incur 20%.</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Rates</p>
@@ -89,7 +89,7 @@ export function Terms() {
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Cancellation</p>
-                  <p>Employer/Facility cancellation &lt;12h: KSh 1,000 or 20% (whichever is higher).</p>
+                  <p>Employer/Facility cancellation &lt;24h: KSh 1,000 or 20% (whichever is higher).</p>
                 </div>
                 <div className="rounded-lg bg-secondary/50 p-3 border border-border/50">
                   <p className="font-semibold text-foreground mb-1">Permanent Hire</p>
@@ -135,7 +135,7 @@ export function Terms() {
               </div>
               <div className="flex items-center gap-2 text-xs text-yellow-500 bg-yellow-500/10 rounded-lg p-2">
                 <AlertTriangle className="h-3 w-3" />
-                <span>Late cancel &lt;12h: strike + temporary de-ranking; no-show fees may apply.</span>
+                <span>Late cancel &lt;24h: strike + temporary de-ranking; no-show fees may apply.</span>
               </div>
             </div>
           </AccordionContent>

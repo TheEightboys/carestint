@@ -117,7 +117,7 @@ export function Fees() {
                                     <div className="flex-1">
                                         <h4 className="font-semibold">Cancellation</h4>
                                         <p className="text-sm text-muted-foreground">
-                                            &lt;12h notice: KSh 1,000 or 20% (whichever is higher)
+                                            &lt;24h notice: KSh 1,000 or 20% (whichever is higher)
                                         </p>
                                     </div>
                                 </div>
