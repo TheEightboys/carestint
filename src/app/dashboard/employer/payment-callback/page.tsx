@@ -7,7 +7,7 @@
  * Verifies payment status and shows result.
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getPaymentIntent, verifyPayment } from '@/lib/flutterwave-service';
 import type { PaymentIntent } from '@/lib/types';
 
-export default function PaymentCallbackPage() {
+function PaymentCallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const intentId = searchParams.get('intent');
@@ -180,5 +180,33 @@ export default function PaymentCallbackPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+// Loading fallback for Suspense
+function PaymentCallbackLoading() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+            <Card className="w-full max-w-md">
+                <CardContent className="pt-6">
+                    <div className="text-center space-y-4">
+                        <Loader2 className="h-12 w-12 animate-spin mx-auto text-accent" />
+                        <div>
+                            <h2 className="text-xl font-semibold">Loading...</h2>
+                            <p className="text-sm text-muted-foreground">Please wait</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+// Main page component with Suspense boundary
+export default function PaymentCallbackPage() {
+    return (
+        <Suspense fallback={<PaymentCallbackLoading />}>
+            <PaymentCallbackContent />
+        </Suspense>
     );
 }
