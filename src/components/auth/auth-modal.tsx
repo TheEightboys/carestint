@@ -38,10 +38,12 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
   const [authMode, setAuthMode] = useState<AuthMode>(defaultMode);
   const [pendingEmail, setPendingEmail] = useState('');
 
-  // Update authMode when defaultMode changes
+  // Update authMode when defaultMode changes or modal opens
   useEffect(() => {
-    setAuthMode(defaultMode);
-  }, [defaultMode]);
+    if (isOpen) {
+      setAuthMode(defaultMode);
+    }
+  }, [defaultMode, isOpen]);
 
   // Auth states
   const [email, setEmail] = useState('');
@@ -341,7 +343,7 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
         setPassword('');
         setFullName('');
         setPendingEmail('');
-        setAuthMode('signin');
+        setAuthMode(defaultMode);
       }, 300);
     }
   };

@@ -66,6 +66,9 @@ import {
   getDashboardStats,
   getOpenDisputes,
   getRecentAuditLogs,
+  getProfileUpdateRequests,
+  updateProfileUpdateRequestStatus,
+  type ProfileUpdateRequest,
 } from "@/lib/firebase/firestore"
 import { getRiskDistribution, recalculateAllRiskScores } from "@/lib/risk-scoring"
 import { getSettlementStats, processReadySettlements } from "@/lib/settlement-engine"
@@ -89,7 +92,9 @@ export default function SuperAdminDashboardPage() {
   });
   const [openDisputes, setOpenDisputes] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [profileUpdateRequests, setProfileUpdateRequests] = useState<ProfileUpdateRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
   // NEW: Enhanced stats
   const [riskDistribution, setRiskDistribution] = useState({
@@ -175,10 +180,44 @@ export default function SuperAdminDashboardPage() {
     }
   };
 
+  // Handle Profile Update Request (Approve/Reject)
+  const handleProfileUpdateRequest = async (requestId: string, status: 'approved' | 'rejected') => {
+    setProcessingRequestId(requestId);
+    try {
+      const adminNotes = status === 'rejected'
+        ? prompt('Please provide a reason for rejection (optional):') || ''
+        : '';
+
+      const success = await updateProfileUpdateRequestStatus(requestId, status, 'superadmin', adminNotes);
+
+      if (success) {
+        // Remove from the list
+        setProfileUpdateRequests(prev => prev.filter(r => r.id !== requestId));
+        toast({
+          title: status === 'approved' ? 'Request Approved' : 'Request Rejected',
+          description: status === 'approved'
+            ? 'The user will be notified that their request has been approved.'
+            : 'The user will be notified that their request has been rejected.',
+        });
+      } else {
+        throw new Error('Failed to update request');
+      }
+    } catch (error) {
+      console.error('Error processing profile update request:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to process the request. Please try again.',
+      });
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [professionals, employers, statsData, disputes, logs, riskData, settleData, dupData, autoSettings] = await Promise.all([
+        const [professionals, employers, statsData, disputes, logs, riskData, settleData, dupData, autoSettings, profileRequests] = await Promise.all([
           getPendingProfessionals(),
           getPendingEmployers(),
           getDashboardStats(),
@@ -188,6 +227,7 @@ export default function SuperAdminDashboardPage() {
           getSettlementStats(),
           getDuplicateStats(),
           getAutomationSettings(),
+          getProfileUpdateRequests('pending'),
         ]);
         setNewProfessionals(professionals);
         setNewEmployers(employers);
@@ -198,6 +238,7 @@ export default function SuperAdminDashboardPage() {
         setSettlementStats(settleData);
         setDuplicateStats(dupData);
         setAutomationSettings(autoSettings);
+        setProfileUpdateRequests(profileRequests);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -704,6 +745,92 @@ export default function SuperAdminDashboardPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Profile Update Requests */}
+            {profileUpdateRequests.length > 0 && (
+              <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                    Profile Update Requests
+                    <Badge variant="secondary" className="ml-2">{profileUpdateRequests.length}</Badge>
+                  </CardTitle>
+                  <CardDescription>Users requesting changes to their verified profile information.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Field</TableHead>
+                        <TableHead>Current Value</TableHead>
+                        <TableHead>Requested Value</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {profileUpdateRequests.slice(0, 10).map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium text-sm truncate max-w-[120px]">{request.requesterName}</div>
+                              <div className="text-xs text-muted-foreground capitalize">{request.requesterType}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {request.fieldToUpdate.replace(/([A-Z])/g, ' $1').trim()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={request.currentValue || 'Not set'}>
+                              {request.currentValue || <span className="italic opacity-50">Not set</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs font-medium text-accent truncate max-w-[150px]" title={request.requestedValue || 'Not specified'}>
+                              {request.requestedValue || <span className="italic opacity-50">Not specified</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs text-muted-foreground truncate max-w-[150px]" title={request.reason}>
+                              {request.reason}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={processingRequestId === request.id}
+                                onClick={() => handleProfileUpdateRequest(request.id, 'approved')}
+                                className="text-green-600 hover:text-green-700 hover:bg-green-100 h-7 px-2"
+                              >
+                                {processingRequestId === request.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={processingRequestId === request.id}
+                                onClick={() => handleProfileUpdateRequest(request.id, 'rejected')}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-100 h-7 px-2"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>

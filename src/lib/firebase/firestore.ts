@@ -2,7 +2,7 @@
 
 import { collection, addDoc, serverTimestamp, getDocs, query, where, doc, getDoc, updateDoc, orderBy, limit, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from './clientApp';
-import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType, ActiveRole, UserAccount, DualRoleInfo, EmployerStatus, ProfessionalStatus } from '@/lib/types';
+import type { StintStatus, ApplicationStatus, DisputeStatus, PayoutStatus, AuditAction, ActorType, EntityType, ProfessionalRole, ShiftType, UrgencyType, ActiveRole, UserAccount, DualRoleInfo, EmployerStatus, ProfessionalStatus, Professional } from '@/lib/types';
 
 // Helper function to get the Firestore instance
 const getDb = () => {
@@ -199,8 +199,33 @@ export const checkConflictOfInterest = async (professionalId: string, employerId
 export const addEmployer = async (employerData: any) => {
     const firestore = getDb();
     try {
+        // Generate a unique location ID for the first location
+        const locationId = `loc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Transform flat form data into multi-location structure
+        const firstLocation = {
+            id: locationId,
+            name: employerData.locationName || 'Main Location',
+            streetArea: employerData.streetArea || '',
+            town: employerData.city || '',
+            country: employerData.country || 'Kenya',
+            isMainLocation: true,
+            createdAt: new Date(),
+        };
+
+        // Generate org ID for multi-site employers
+        const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Clean up form-specific fields before storing
+        const { locationName, streetArea, siteType, ...restData } = employerData;
+
         const docRef = await addDoc(collection(firestore, 'employers'), {
-            ...employerData,
+            ...restData,
+            // Multi-location fields
+            facilityType: siteType || 'single-site',
+            locations: [firstLocation],
+            orgId: orgId,
+            // Default status fields
             status: 'pending_validation',
             riskScore: 0,
             riskLevel: 'Low',
@@ -217,7 +242,7 @@ export const addEmployer = async (employerData: any) => {
             entityType: 'employer',
             entityId: docRef.id,
             action: 'EMPLOYER_CREATED',
-            description: `New employer "${employerData.facilityName}" submitted for review`,
+            description: `New employer "${employerData.facilityName}" (${siteType || 'single-site'}) submitted for review`,
         });
         return docRef.id;
     } catch (e) {
@@ -460,7 +485,24 @@ export const getProfessionalByEmail = async (email: string) => {
     }
 }
 
+// Update professional with any fields
+export const updateProfessional = async (id: string, data: Partial<Professional>) => {
+    const firestore = getDb();
+    try {
+        const docRef = doc(firestore, 'professionals', id);
+        await updateDoc(docRef, {
+            ...data,
+            updatedAt: serverTimestamp(),
+        });
+        return true;
+    } catch (error) {
+        console.error("Error updating professional:", error);
+        return false;
+    }
+}
+
 export const updateProfessionalStatus = async (id: string, status: string, additionalData?: any) => {
+
     const firestore = getDb();
     try {
         const docRef = doc(firestore, 'professionals', id);
@@ -601,6 +643,9 @@ export const addStint = async (stintData: {
     minBid?: number;
     maxBid?: number;
     urgency: UrgencyType;
+    // Multi-day stint fields
+    isMultiDay?: boolean;
+    dateRangeId?: string;
 }) => {
     const firestore = getDb();
     try {
@@ -608,9 +653,20 @@ export const addStint = async (stintData: {
         const bookingFeePercent = stintData.urgency === 'urgent' ? 20 : 15;
         const bookingFeeAmount = Math.round(stintData.offeredRate * (bookingFeePercent / 100));
 
-        const docRef = await addDoc(collection(firestore, 'stints'), {
-            ...stintData,
+        // Build document data, filtering out undefined values
+        const docData: Record<string, any> = {
+            employerId: stintData.employerId,
+            employerName: stintData.employerName,
+            role: stintData.role,
+            shiftType: stintData.shiftType,
             shiftDate: Timestamp.fromDate(stintData.shiftDate),
+            startTime: stintData.startTime,
+            endTime: stintData.endTime,
+            city: stintData.city,
+            offeredRate: stintData.offeredRate,
+            currency: stintData.currency,
+            allowBids: stintData.allowBids,
+            urgency: stintData.urgency,
             status: 'open' as StintStatus,
             bookingFeePercent,
             bookingFeeAmount,
@@ -619,7 +675,17 @@ export const addStint = async (stintData: {
             cancellationFeeApplied: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-        });
+        };
+
+        // Add optional fields only if defined
+        if (stintData.description) docData.description = stintData.description;
+        if (stintData.address) docData.address = stintData.address;
+        if (stintData.minBid !== undefined) docData.minBid = stintData.minBid;
+        if (stintData.maxBid !== undefined) docData.maxBid = stintData.maxBid;
+        if (stintData.isMultiDay) docData.isMultiDay = stintData.isMultiDay;
+        if (stintData.dateRangeId) docData.dateRangeId = stintData.dateRangeId;
+
+        const docRef = await addDoc(collection(firestore, 'stints'), docData);
 
         await addAuditLog({
             actorType: 'employer',
@@ -1566,3 +1632,165 @@ export const getStintsByProfessional = async (professionalId: string) => {
     }
 };
 
+// =============================================
+// PROFILE UPDATE REQUEST SERVICES
+// =============================================
+
+export type ProfileUpdateRequestStatus = 'pending' | 'approved' | 'rejected';
+export type ProfileUpdateRequesterType = 'professional' | 'employer';
+
+export interface ProfileUpdateRequest {
+    id: string;
+    requesterType: ProfileUpdateRequesterType;
+    requesterId: string;
+    requesterName: string;
+    requesterEmail: string;
+    fieldToUpdate: string;
+    currentValue?: string;
+    requestedValue?: string;
+    reason: string;
+    status: ProfileUpdateRequestStatus;
+    adminNotes?: string;
+    reviewedBy?: string;
+    reviewedAt?: any;
+    createdAt: any;
+    updatedAt: any;
+}
+
+// Create a new profile update request
+export const createProfileUpdateRequest = async (requestData: {
+    requesterType: ProfileUpdateRequesterType;
+    requesterId: string;
+    requesterName: string;
+    requesterEmail: string;
+    fieldToUpdate: string;
+    currentValue?: string;
+    requestedValue?: string;
+    reason: string;
+}): Promise<string | null> => {
+    const firestore = getDb();
+    try {
+        const docRef = await addDoc(collection(firestore, 'profile_update_requests'), {
+            ...requestData,
+            status: 'pending' as ProfileUpdateRequestStatus,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        // Create audit log
+        await addAuditLog({
+            actorType: requestData.requesterType,
+            actorId: requestData.requesterId,
+            entityType: requestData.requesterType,
+            entityId: requestData.requesterId,
+            action: 'PROFILE_UPDATE_REQUESTED' as any,
+            description: `Profile update request submitted for field: ${requestData.fieldToUpdate}`,
+        });
+
+        return docRef.id;
+    } catch (error) {
+        console.error('Error creating profile update request:', error);
+        return null;
+    }
+};
+
+// Get all profile update requests (for admin dashboard)
+export const getProfileUpdateRequests = async (status?: ProfileUpdateRequestStatus): Promise<ProfileUpdateRequest[]> => {
+    const firestore = getDb();
+    try {
+        let q;
+        if (status) {
+            q = query(
+                collection(firestore, 'profile_update_requests'),
+                where('status', '==', status),
+                orderBy('createdAt', 'desc')
+            );
+        } else {
+            q = query(
+                collection(firestore, 'profile_update_requests'),
+                orderBy('createdAt', 'desc')
+            );
+        }
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ProfileUpdateRequest[];
+    } catch (error) {
+        console.error('Error getting profile update requests:', error);
+        return [];
+    }
+};
+
+// Get pending profile update requests count
+export const getPendingProfileUpdateRequestsCount = async (): Promise<number> => {
+    const firestore = getDb();
+    try {
+        const q = query(
+            collection(firestore, 'profile_update_requests'),
+            where('status', '==', 'pending')
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.size;
+    } catch (error) {
+        console.error('Error getting pending profile update requests count:', error);
+        return 0;
+    }
+};
+
+// Update profile update request status (approve/reject)
+export const updateProfileUpdateRequestStatus = async (
+    requestId: string,
+    status: 'approved' | 'rejected',
+    adminId: string,
+    adminNotes?: string
+): Promise<boolean> => {
+    const firestore = getDb();
+    try {
+        const docRef = doc(firestore, 'profile_update_requests', requestId);
+        await updateDoc(docRef, {
+            status,
+            adminNotes: adminNotes || '',
+            reviewedBy: adminId,
+            reviewedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        // Get the request details for audit log
+        const requestSnap = await getDoc(docRef);
+        const requestData = requestSnap.data();
+
+        // Create audit log
+        await addAuditLog({
+            actorType: 'superadmin',
+            actorId: adminId,
+            entityType: requestData?.requesterType || 'professional',
+            entityId: requestData?.requesterId || requestId,
+            action: status === 'approved' ? 'PROFILE_UPDATE_APPROVED' as any : 'PROFILE_UPDATE_REJECTED' as any,
+            description: `Profile update request ${status} for field: ${requestData?.fieldToUpdate}`,
+        });
+
+        return true;
+    } catch (error) {
+        console.error('Error updating profile update request status:', error);
+        return false;
+    }
+};
+
+// Get profile update requests by user
+export const getProfileUpdateRequestsByUser = async (
+    requesterType: ProfileUpdateRequesterType,
+    requesterId: string
+): Promise<ProfileUpdateRequest[]> => {
+    const firestore = getDb();
+    try {
+        const q = query(
+            collection(firestore, 'profile_update_requests'),
+            where('requesterType', '==', requesterType),
+            where('requesterId', '==', requesterId),
+            orderBy('createdAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ProfileUpdateRequest[];
+    } catch (error) {
+        console.error('Error getting profile update requests by user:', error);
+        return [];
+    }
+};

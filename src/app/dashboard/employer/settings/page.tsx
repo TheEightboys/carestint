@@ -336,7 +336,7 @@ export default function EmployerSettingsPage() {
                                 </p>
                             </div>
                             <div className="space-y-1">
-                                <Label className="text-muted-foreground text-xs">City</Label>
+                                <Label className="text-muted-foreground text-xs">City/Town</Label>
                                 <p className="font-medium">{employer?.city}</p>
                             </div>
                             <div className="space-y-1">

@@ -82,10 +82,12 @@ export function ActiveStint({ professionalId = "demo-professional" }: ActiveStin
 
             if (acceptedApp) {
                 const stint = (await getStintById(acceptedApp.stintId)) as StintData;
-                if (stint && ["accepted", "in_progress"].includes(stint.status)) {
+                // Show stint if it's confirmed (paid), accepted, or in_progress
+                if (stint && ["confirmed", "accepted", "in_progress"].includes(stint.status)) {
                     setActiveStint(stint);
                 }
             }
+
         } catch (error) {
             console.error("Error loading active stint:", error);
         } finally {
@@ -155,12 +157,16 @@ export function ActiveStint({ professionalId = "demo-professional" }: ActiveStin
         try {
             const success = await clockOutStint(activeStint.id);
             if (success) {
+                // Clear the active stint immediately so UI updates
+                setActiveStint(null);
+
                 toast({
-                    title: "Clocked Out!",
-                    description: "Great work! Your shift has been completed.",
+                    title: "🎉 Shift Completed!",
+                    description: "Great work! Your earnings will be processed within 24 hours.",
                 });
+
+                // Show rating dialog
                 setShowRatingDialog(true);
-                await loadActiveStint();
             } else {
                 throw new Error("Failed to clock out");
             }
@@ -175,6 +181,7 @@ export function ActiveStint({ professionalId = "demo-professional" }: ActiveStin
             setIsClockingOut(false);
         }
     };
+
 
     const handleSubmitRating = async () => {
         // TODO: Submit rating to Firestore

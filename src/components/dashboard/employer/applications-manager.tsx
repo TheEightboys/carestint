@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { UserCheck, Clock, MessageSquare, Star, CheckCircle, XCircle, Loader2, User } from 'lucide-react';
+import { UserCheck, Clock, MessageSquare, Star, CheckCircle, XCircle, Loader2, User, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getApplicationsByStint, updateApplicationStatus, acceptStint } from '@/lib/firebase/firestore';
+import { getApplicationsByStint, updateApplicationStatus } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,9 +48,12 @@ interface ApplicationsManagerProps {
     stintRole: string;
     offeredRate: number;
     onApplicationAccepted?: () => void;
+    // NEW: Callback to initiate payment flow - required for proper workflow
+    onInitiatePayment?: (application: Application) => void;
 }
 
-export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplicationAccepted }: ApplicationsManagerProps) {
+export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplicationAccepted, onInitiatePayment }: ApplicationsManagerProps) {
+
     const { toast } = useToast();
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
@@ -83,36 +86,20 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
     };
 
     const handleAccept = async (app: Application) => {
-        setProcessingId(app.id);
-        try {
-            // Update application status
-            await updateApplicationStatus(app.id, 'accepted');
-            // Accept the stint with this professional
-            await acceptStint(stintId, app.professionalId, app.professionalName);
-            // Reject other pending applications
-            const otherApps = applications.filter(a => a.id !== app.id && a.status === 'pending');
-            for (const otherApp of otherApps) {
-                await updateApplicationStatus(otherApp.id, 'rejected', 'Another applicant was selected');
-            }
-
-            toast({
-                title: 'Application Accepted',
-                description: `${app.professionalName} has been assigned to this stint.`,
-            });
-
-            onApplicationAccepted?.();
-            loadApplications();
-        } catch (error) {
-            console.error('Error accepting application:', error);
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Failed to accept application. Please try again.',
-            });
-        } finally {
-            setProcessingId(null);
+        // If payment callback is provided, use proper payment flow
+        if (onInitiatePayment) {
+            onInitiatePayment(app);
+            return;
         }
+
+        // Fallback: Show warning that payment is required
+        toast({
+            variant: 'destructive',
+            title: 'Payment Required',
+            description: 'Please accept applicants through the Stints page to complete payment.',
+        });
     };
+
 
     const handleReject = async () => {
         if (!selectedApp) return;
@@ -258,14 +245,16 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
                                                             size="sm"
                                                             onClick={() => handleAccept(app)}
                                                             disabled={processingId === app.id}
+                                                            className="bg-accent hover:bg-accent/90"
                                                         >
                                                             {processingId === app.id ? (
                                                                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
                                                             ) : (
-                                                                <CheckCircle className="h-4 w-4 mr-1" />
+                                                                <Wallet className="h-4 w-4 mr-1" />
                                                             )}
-                                                            Accept
+                                                            Accept & Pay
                                                         </Button>
+
                                                     </div>
                                                 </div>
                                             </div>

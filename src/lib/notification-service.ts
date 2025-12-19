@@ -27,7 +27,14 @@ export type NotificationType =
     | 'payout_completed'
     | 'payout_failed'
     | 'invoice_generated'
-    | 'invoice_overdue';
+    | 'invoice_overdue'
+    // Payment flow notifications
+    | 'payment_success'
+    | 'payment_failed'
+    | 'shift_confirmed'
+    | 'selection_expired'
+    | 'shift_cancelled'
+    | 'no_show_reported';
 
 // Notification recipient types
 export type RecipientType = 'employer' | 'professional' | 'superadmin';
@@ -146,6 +153,37 @@ const NOTIFICATION_TEMPLATES: Record<
         title: 'Invoice Overdue ⚠️',
         message:
             'Invoice #{{invoiceNumber}} for KES {{amount}} is overdue. Please make payment to avoid service interruption.',
+    },
+    // Payment flow templates
+    payment_success: {
+        title: 'Payment Successful! ✅',
+        message:
+            'Payment of {{currency}} {{amount}} successful. {{professionalName}} is confirmed for your shift.',
+    },
+    payment_failed: {
+        title: 'Payment Failed',
+        message:
+            'Payment of {{currency}} {{amount}} failed. {{reason}} Please try again.',
+    },
+    shift_confirmed: {
+        title: "Confirmed! You're Booked 🎉",
+        message:
+            "Great news! You're confirmed for {{role}} at {{location}} on {{date}}. Report time: {{startTime}}.",
+    },
+    selection_expired: {
+        title: 'Selection Expired',
+        message:
+            "The employer's payment for {{role}} shift expired. The shift is now open for other applicants.",
+    },
+    shift_cancelled: {
+        title: 'Shift Cancelled',
+        message:
+            'The {{role}} shift on {{date}} has been cancelled by the employer.',
+    },
+    no_show_reported: {
+        title: 'No-Show Reported ⚠️',
+        message:
+            'A no-show has been reported for your scheduled shift. This impacts your reliability score. Contact support if you believe this is an error.',
     },
 };
 

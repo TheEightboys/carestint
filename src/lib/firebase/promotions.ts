@@ -59,10 +59,10 @@ export async function getAllPromotions(): Promise<Promotion[]> {
  */
 export async function getActivePromotions(): Promise<Promotion[]> {
     const promotionsRef = collection(db, PROMOTIONS_COLLECTION);
+    // Simple query without orderBy to avoid composite index requirement
     const q = query(
         promotionsRef,
-        where("isActive", "==", true),
-        orderBy("createdAt", "desc")
+        where("isActive", "==", true)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map((doc) => ({

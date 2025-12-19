@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Wallet, Download, Calendar, Filter, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Wallet, Download, Calendar, Filter, CheckCircle, Clock, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -73,7 +75,6 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
 
     const loadEarnings = async () => {
         if (!professionalId || professionalId === 'demo-professional') {
-            // No real data for demo user
             setEarnings([]);
             setLoading(false);
             return;
@@ -81,23 +82,80 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
 
         setLoading(true);
         try {
-            const payouts = await getPayoutsByProfessional(professionalId);
-            const formattedEarnings: Earning[] = payouts.map((p: any) => ({
-                id: p.id,
-                stintId: p.stintId || '',
-                employerName: p.employerName || 'Unknown Employer',
-                role: p.role || 'Healthcare Professional',
-                shiftDate: p.shiftDate?.toDate?.() || new Date(p.shiftDate) || new Date(),
-                grossAmount: p.grossAmount || p.amount || 0,
-                platformFee: p.platformFee || 0,
-                mpesaCost: p.mpesaCost || 35,
-                netAmount: p.netAmount || p.amount || 0,
-                currency: p.currency || 'KES',
-                status: p.status || 'pending',
-                paidAt: p.paidAt?.toDate?.() || (p.paidAt ? new Date(p.paidAt) : undefined),
-                transactionId: p.transactionId,
-            }));
-            setEarnings(formattedEarnings);
+            // Import function to get completed stints for this professional
+            const { getStintsByProfessional } = await import('@/lib/firebase/firestore');
+
+            // Get all stints where this professional was assigned
+            const stints = await getStintsByProfessional(professionalId);
+
+            // Filter to completed stints
+            const completedStints = stints.filter((s: any) =>
+                ['completed', 'closed', 'paid_out'].includes(s.status)
+            );
+
+            // Convert stints to earnings records
+            const earningsFromStints: Earning[] = completedStints.map((stint: any) => {
+                const grossAmount = stint.offeredRate || 0;
+                const platformFee = Math.round(grossAmount * 0.05); // 5% professional fee
+                const mpesaCost = 35; // M-Pesa transaction cost
+                const netAmount = grossAmount - platformFee;
+
+                // Determine payout status
+                let payoutStatus: 'pending' | 'processing' | 'completed' | 'failed' = 'pending';
+                if (stint.status === 'paid_out' || stint.payoutStatus === 'completed') {
+                    payoutStatus = 'completed';
+                } else if (stint.payoutStatus === 'processing') {
+                    payoutStatus = 'processing';
+                }
+
+                return {
+                    id: stint.id,
+                    stintId: stint.id,
+                    employerName: stint.employerName || 'Unknown Employer',
+                    role: stint.role || 'Healthcare Professional',
+                    shiftDate: stint.shiftDate?.toDate?.() || new Date(stint.shiftDate) || new Date(),
+                    grossAmount,
+                    platformFee,
+                    mpesaCost,
+                    netAmount,
+                    currency: stint.currency || 'KES',
+                    status: payoutStatus,
+                    paidAt: stint.paidAt?.toDate?.() || undefined,
+                    transactionId: stint.paymentRef || undefined,
+                };
+            });
+
+            // Also get any existing payout records (for backwards compatibility)
+            try {
+                const payouts = await getPayoutsByProfessional(professionalId);
+                const payoutStintIds = payouts.map((p: any) => p.stintId);
+
+                // Add payout records that aren't already from stints
+                const uniquePayouts = payouts.filter((p: any) =>
+                    !earningsFromStints.find(e => e.stintId === p.stintId)
+                );
+
+                const formattedPayouts: Earning[] = uniquePayouts.map((p: any) => ({
+                    id: p.id,
+                    stintId: p.stintId || '',
+                    employerName: p.employerName || 'Unknown Employer',
+                    role: p.role || 'Healthcare Professional',
+                    shiftDate: p.shiftDate?.toDate?.() || new Date(p.shiftDate) || new Date(),
+                    grossAmount: p.grossAmount || p.amount || 0,
+                    platformFee: p.platformFee || 0,
+                    mpesaCost: p.mpesaCost || 35,
+                    netAmount: p.netAmount || p.amount || 0,
+                    currency: p.currency || 'KES',
+                    status: p.status || 'pending',
+                    paidAt: p.paidAt?.toDate?.() || undefined,
+                    transactionId: p.transactionId,
+                }));
+
+                setEarnings([...earningsFromStints, ...formattedPayouts]);
+            } catch {
+                // If payout fetch fails, just use stint-based earnings
+                setEarnings(earningsFromStints);
+            }
         } catch (error) {
             console.error("Error loading earnings:", error);
             setEarnings([]);
@@ -106,15 +164,22 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
         }
     };
 
+
     const filteredEarnings = earnings.filter(e => {
         if (filter !== 'all' && e.status !== filter) return false;
         return true;
     });
 
-    const totalEarned = earnings.filter(e => e.status === 'completed').reduce((sum, e) => sum + e.netAmount, 0);
+    // Total earned = all completed shifts (including pending payouts)
+    const totalEarned = earnings.reduce((sum, e) => sum + e.netAmount, 0);
+    // Pending = not yet paid out
     const pendingAmount = earnings.filter(e => e.status !== 'completed').reduce((sum, e) => sum + e.netAmount, 0);
-    const totalStints = earnings.filter(e => e.status === 'completed').length;
+    // Paid = already received
+    const paidAmount = earnings.filter(e => e.status === 'completed').reduce((sum, e) => sum + e.netAmount, 0);
+    // Total stints = all completed shifts
+    const totalStints = earnings.length;
     const avgPerStint = totalStints > 0 ? totalEarned / totalStints : 0;
+
 
     return (
         <Card>
@@ -129,10 +194,18 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                             Track your earnings and payout history.
                         </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/dashboard/professional/earnings">
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Payment Settings
+                            </Link>
+                        </Button>
+                        <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-2" />
+                            Export
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -155,6 +228,24 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                         <p className="text-xs text-muted-foreground">Avg Per Stint</p>
                     </div>
                 </div>
+
+                {/* Pending Payout Notice */}
+                {pendingAmount > 0 && (
+                    <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                        <div className="flex items-start gap-3">
+                            <Clock className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-medium text-yellow-700 dark:text-yellow-400">
+                                    KES {pendingAmount.toLocaleString()} Pending Payout
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Your earnings are held for 24 hours after shift completion to allow for any disputes.
+                                    Payouts are then processed to your M-Pesa or bank account automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Filters */}
                 <div className="flex gap-4 mb-4">

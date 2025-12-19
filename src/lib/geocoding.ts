@@ -37,6 +37,7 @@ export const CITY_COORDINATES: Record<string, Coordinates> = {
     'Bungoma': { lat: 0.5635, lng: 34.5606 },
     'Kiambu': { lat: -1.1714, lng: 36.8356 },
     'Ruiru': { lat: -1.1489, lng: 36.9606 },
+    'Lamu': { lat: -2.2717, lng: 40.9020 },
 
     // Uganda
     'Kampala': { lat: 0.3476, lng: 32.5825 },
@@ -44,6 +45,11 @@ export const CITY_COORDINATES: Record<string, Coordinates> = {
     'Jinja': { lat: 0.4244, lng: 33.2041 },
     'Mbarara': { lat: -0.6072, lng: 30.6545 },
     'Gulu': { lat: 2.7747, lng: 32.2990 },
+    'Lira': { lat: 2.2499, lng: 32.8999 },
+    'Mbale': { lat: 1.0647, lng: 34.1797 },
+    'Masaka': { lat: -0.3412, lng: 31.7319 },
+    'Soroti': { lat: 1.7147, lng: 33.6111 },
+    'Fort Portal': { lat: 0.6603, lng: 30.2750 },
 
     // Tanzania
     'Dar es Salaam': { lat: -6.7924, lng: 39.2083 },
@@ -51,6 +57,12 @@ export const CITY_COORDINATES: Record<string, Coordinates> = {
     'Mwanza': { lat: -2.5164, lng: 32.9175 },
     'Dodoma': { lat: -6.1630, lng: 35.7516 },
     'Zanzibar': { lat: -6.1659, lng: 39.2026 },
+    'Zanzibar City': { lat: -6.1659, lng: 39.2026 },
+    'Tanga': { lat: -5.0689, lng: 39.0993 },
+    'Moshi': { lat: -3.3350, lng: 37.3401 },
+    'Morogoro': { lat: -6.8208, lng: 37.6602 },
+    'Mbeya': { lat: -8.9094, lng: 33.4608 },
+    'Tabora': { lat: -5.0167, lng: 32.8000 },
 
     // Rwanda
     'Kigali': { lat: -1.9403, lng: 29.8739 },

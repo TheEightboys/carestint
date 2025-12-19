@@ -22,16 +22,18 @@ export type ProfessionalStatus =
     | 'rejected';
 
 export type StintStatus =
-    | 'pending'        // Stint posted but no pro confirmed
-    | 'confirmed'      // Pro selected + accepted, upcoming
-    | 'in_progress'    // Pro clocked in / shift started
-    | 'completed'      // Shift ended, hours confirmed
-    | 'cancelled'      // Cancelled (with sub-reason metadata)
-    | 'expired'        // Not filled in time
-    | 'no_show'        // Pro didn't attend
-    | 'disputed'       // Hours or payment dispute
-    | 'under_review'   // SuperAdmin flagged for review
-    | 'closed';        // Rating done, archived
+    | 'open'              // Stint posted, accepting applications
+    | 'payment_required'  // Pro selected, awaiting employer payment
+    | 'confirmed'         // Payment successful, shift upcoming
+    | 'in_progress'       // Pro clocked in / shift started
+    | 'completed'         // Shift ended, hours confirmed
+    | 'cancelled'         // Cancelled (with sub-reason metadata)
+    | 'expired'           // Not filled in time
+    | 'no_show'           // Pro didn't attend
+    | 'disputed'          // Hours or payment dispute
+    | 'under_review'      // SuperAdmin flagged for review
+    | 'paid_out'          // Professional payout completed
+    | 'closed';           // Rating done, archived
 
 export type ApplicationStatus =
     | 'pending'
@@ -48,10 +50,130 @@ export type DisputeStatus =
 
 export type PayoutStatus =
     | 'pending'
+    | 'scheduled'         // Waiting for 24-hour delay
     | 'ready_for_settlement'
     | 'processing'
     | 'completed'
-    | 'failed';
+    | 'failed'
+    | 'held';             // Held due to dispute/no-show
+
+// ===== PAYMENT INTENT (Flutterwave Booking Payment) =====
+
+export type PaymentIntentStatus =
+    | 'initiated'           // Payment intent created
+    | 'pending'             // Awaiting M-Pesa PIN / card auth
+    | 'success'             // Payment completed successfully
+    | 'failed'              // Payment failed
+    | 'expired'             // Payment timed out (15 min default)
+    | 'cancelled'           // User cancelled payment
+    | 'refunded'            // Full refund issued
+    | 'partially_refunded'; // Partial refund issued
+
+export interface PaymentIntent {
+    id: string;
+    // References
+    stintId: string;
+    applicationId: string;
+    employerId: string;
+    professionalId: string;
+    professionalName: string;
+    // Amount breakdown
+    amount: number;             // Total amount charged
+    currency: string;           // KES, UGX, TZS
+    offeredRate: number;        // Professional's rate
+    platformFee: number;        // CareStint platform fee
+    processingFee: number;      // Payment processing fee
+    // Payment method
+    paymentMethod: 'mpesa' | 'card';
+    phoneNumber?: string;       // For M-Pesa STK Push
+    cardLast4?: string;         // For card payments
+    cardBrand?: string;         // Visa, Mastercard, etc.
+    // Flutterwave references
+    flutterwaveRef?: string;    // Flutterwave transaction reference
+    flutterwaveTxId?: number;   // Flutterwave transaction ID
+    // Status
+    status: PaymentIntentStatus;
+    failureReason?: string;
+    retryCount: number;
+    // Refund tracking
+    refundedAmount?: number;
+    refundReason?: string;
+    refundRef?: string;         // Flutterwave refund reference
+    // Timestamps
+    createdAt: Date;
+    updatedAt: Date;
+    completedAt?: Date;
+    failedAt?: Date;
+    refundedAt?: Date;
+    expiresAt: Date;            // Payment expires if not completed (15 min)
+}
+
+// ===== PAYOUT RECORD (Professional Payouts) =====
+
+export interface PayoutRecord {
+    id: string;
+    // References
+    stintId: string;
+    paymentIntentId: string;
+    professionalId: string;
+    professionalName: string;
+    employerId: string;
+    // Amounts
+    grossAmount: number;        // Amount before fees
+    platformFee: number;        // Platform fee deducted
+    transferFee: number;        // Flutterwave transfer fee
+    netAmount: number;          // Amount professional receives
+    currency: string;
+    // Transfer details
+    payoutMethod: 'mpesa' | 'bank';
+    accountNumber: string;      // M-Pesa number or bank account
+    bankCode?: string;          // For bank transfers
+    bankName?: string;
+    // Flutterwave references
+    flutterwaveTransferId?: number;
+    flutterwaveRef?: string;
+    // Status
+    status: PayoutStatus;
+    failureReason?: string;
+    retryCount: number;
+    // Timing
+    shiftCompletedAt: Date;
+    eligibleAt: Date;           // completedAt + 24 hours
+    scheduledAt?: Date;
+    processedAt?: Date;
+    // Timestamps
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// ===== LEDGER ENTRY (Fee Tracking) =====
+
+export type LedgerEntryType =
+    | 'payment_received'        // Employer payment collected
+    | 'platform_fee_earned'     // Platform fee portion
+    | 'professional_payout_held'// Pro payout held pending
+    | 'professional_payout_sent'// Pro payout released
+    | 'refund_issued'           // Refund to employer
+    | 'refund_partial'          // Partial refund
+    | 'cancellation_fee'        // Cancellation fee charged
+    | 'no_show_refund';         // Refund for no-show
+
+export interface LedgerEntry {
+    id: string;
+    stintId: string;
+    paymentIntentId?: string;
+    payoutRecordId?: string;
+    // Entry details
+    type: LedgerEntryType;
+    amount: number;
+    currency: string;
+    description: string;
+    // Actor
+    actorType: 'system' | 'employer' | 'professional' | 'superadmin';
+    actorId?: string;
+    // Timestamps
+    createdAt: Date;
+}
 
 export type DocumentQuality = 'ok' | 'low' | 'unreadable';
 
@@ -159,6 +281,20 @@ export const PROFESSIONAL_ROLE_LABELS: Record<ProfessionalRole, string> = {
 
 // ===== Core Entities =====
 
+// Facility Location for multi-site employers
+export type FacilityType = 'single-site' | 'multi-site';
+
+export interface FacilityLocation {
+    id: string;
+    name: string;           // e.g., "Main Branch" or "Westlands"
+    streetArea: string;     // Street / Area / Landmark (free text)
+    town: string;           // Town / City
+    country: string;        // Default: Kenya
+    isMainLocation: boolean;
+    createdAt: Date;
+    updatedAt?: Date;
+}
+
 export interface Employer {
     id: string;
     // Basic info
@@ -171,6 +307,10 @@ export interface Employer {
     country: string;
     operatingDays: string;
     staffSize: string;
+    // Multi-location support
+    facilityType: FacilityType;          // 'single-site' or 'multi-site'
+    locations: FacilityLocation[];       // Array of locations (at least 1)
+    orgId?: string;                      // Organization ID for multi-site grouping
     // License
     licenseNumber: string;
     licenseDocument?: string;
@@ -221,9 +361,12 @@ export interface Professional {
     experience: number;
     dailyRate: number;
     shiftTypes: ShiftType[];
-    // Payout
+    // Payout details
+    preferredPayoutMethod?: 'mpesa' | 'bank';
     mpesaPhone: string;
     bankAccount?: string;
+    bankCode?: string;
+    bankAccountName?: string;
     // Platform status
     status: ProfessionalStatus;
     riskScore: number;
@@ -261,9 +404,15 @@ export interface Stint {
     startTime: string;
     endTime: string;
     description?: string;
-    // Location
+    // Location (enhanced for multi-location)
     city: string;
     address?: string;
+    locationId?: string;          // Reference to FacilityLocation.id
+    locationName?: string;        // Cached location name for display
+    // Multi-day stint coverage
+    parentStintId?: string;       // Links daily stints to original range
+    dateRangeId?: string;         // Groups all stints from same date range
+    isMultiDay?: boolean;         // Flag for multi-day originated stints
     // Pricing
     offeredRate: number;
     currency: string;

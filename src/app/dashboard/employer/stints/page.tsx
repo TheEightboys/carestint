@@ -6,7 +6,7 @@ import {
     ArrowLeft, Briefcase, Clock, DollarSign, MapPin, User, Loader2,
     Calendar, CheckCircle2, XCircle, Play, AlertTriangle, Plus,
     Eye, Edit, Users, Star, Download, RefreshCw, MessageSquare,
-    Info, HelpCircle, FileText, CreditCard, Building
+    Info, HelpCircle, FileText, CreditCard, Building, Wallet
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,8 @@ import {
     isStintToday
 } from "@/lib/stint-utils";
 import type { StintStatus } from "@/lib/types";
+import { AcceptancePaymentModal } from "@/components/dashboard/employer/acceptance-payment-modal";
+import { useToast } from "@/hooks/use-toast";
 
 export default function EmployerStintsPage() {
     const { user, userProfile, dualRoleInfo } = useUser();
@@ -85,6 +87,12 @@ export default function EmployerStintsPage() {
 
     // View Review Status Dialog State
     const [reviewStatusDialogOpen, setReviewStatusDialogOpen] = useState(false);
+
+    // Payment Modal State
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
+
+    const { toast } = useToast();
 
     useEffect(() => {
         if (employerId) {
@@ -628,9 +636,16 @@ Thank you for using CareStint!
                                                         <Eye className="h-4 w-4 mr-1" />
                                                         View
                                                     </Button>
-                                                    <Button size="sm">
-                                                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                        Accept
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedApplicant(applicant);
+                                                            setApplicantsDialogOpen(false);
+                                                            setPaymentModalOpen(true);
+                                                        }}
+                                                    >
+                                                        <Wallet className="h-4 w-4 mr-1" />
+                                                        Accept & Pay
                                                     </Button>
                                                 </>
                                             )}
@@ -974,6 +989,43 @@ Thank you for using CareStint!
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Acceptance Payment Modal */}
+            <AcceptancePaymentModal
+                isOpen={paymentModalOpen}
+                onClose={() => {
+                    setPaymentModalOpen(false);
+                    setSelectedApplicant(null);
+                }}
+                onPaymentSuccess={() => {
+                    setPaymentModalOpen(false);
+                    setSelectedApplicant(null);
+                    loadStints();
+                    toast({
+                        title: "Shift Confirmed!",
+                        description: "Payment successful. The professional has been notified.",
+                    });
+                }}
+                stint={selectedStint ? {
+                    id: selectedStint.id,
+                    role: selectedStint.role,
+                    shiftDate: selectedStint.shiftDate?.toDate ? selectedStint.shiftDate.toDate() : new Date(selectedStint.shiftDate),
+                    startTime: selectedStint.startTime,
+                    endTime: selectedStint.endTime,
+                    city: selectedStint.city,
+                    offeredRate: selectedApplicant?.bidAmount || selectedStint.offeredRate,
+                    currency: selectedStint.currency || 'KES',
+                    employerName: userProfile?.facilityName || 'Employer',
+                } : null}
+                application={selectedApplicant ? {
+                    id: selectedApplicant.id,
+                    professionalId: selectedApplicant.professionalId,
+                    professionalName: selectedApplicant.professionalName,
+                    bidAmount: selectedApplicant.bidAmount,
+                } : null}
+                employerId={employerId || ''}
+                employerEmail={user?.email || ''}
+            />
         </div>
     );
 }

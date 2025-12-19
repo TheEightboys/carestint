@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from "@/lib/utils";
 import { getStintsByEmployer, getApplicationsByStint } from "@/lib/firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/lib/user-context";
 import {
     Dialog,
     DialogContent,
@@ -18,6 +19,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ApplicationsManager } from "./applications-manager";
+import { AcceptancePaymentModal } from "./acceptance-payment-modal";
+
 
 interface Stint {
     id: string;
@@ -40,19 +43,29 @@ interface Stint {
 const getStatusClass = (status: string): string => {
     switch (status) {
         case "open":
-            return "bg-green-500/20 text-green-500 border-green-500/30";
+        case "pending":
+            return "bg-blue-500/20 text-blue-500 border-blue-500/30"; // Blue for open/pending
         case "accepted":
-            return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+        case "confirmed":
+            return "bg-cyan-500/20 text-cyan-500 border-cyan-500/30"; // Cyan for confirmed
         case "in_progress":
-            return "bg-purple-500/20 text-purple-500 border-purple-500/30";
+            return "bg-purple-500/20 text-purple-500 border-purple-500/30"; // Purple for in-progress
         case "completed":
-            return "bg-green-600/20 text-green-600 border-green-600/30";
+        case "closed":
+            return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30"; // Emerald green for completed
         case "disputed":
-            return "bg-red-500/20 text-red-500 border-red-500/30";
+        case "under_review":
+            return "bg-orange-500/20 text-orange-500 border-orange-500/30"; // Orange for disputes
+        case "no_show":
+            return "bg-red-500/20 text-red-500 border-red-500/30"; // Red for no-show
+        case "cancelled":
+        case "expired":
+            return "bg-gray-500/20 text-gray-400 border-gray-500/30"; // Gray for cancelled/expired
         default:
-            return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
+            return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"; // Yellow for unknown
     }
 }
+
 
 interface TodaysStintsProps {
     employerId?: string;
@@ -64,6 +77,12 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
     const [selectedStint, setSelectedStint] = useState<Stint | null>(null);
     const [stintApplicationCounts, setStintApplicationCounts] = useState<Record<string, number>>({});
     const { toast } = useToast();
+
+    // Payment modal state
+    const { user, userProfile } = useUser();
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedApplication, setSelectedApplication] = useState<any>(null);
+    const [stintForPayment, setStintForPayment] = useState<Stint | null>(null);
 
     const fetchStints = async () => {
         setIsLoading(true);
@@ -282,10 +301,55 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                             stintRole={selectedStint.role}
                             offeredRate={selectedStint.offeredRate}
                             onApplicationAccepted={handleApplicationAccepted}
+                            onInitiatePayment={(application) => {
+                                setSelectedApplication(application);
+                                setStintForPayment(selectedStint); // Store stint before closing dialog
+                                setSelectedStint(null); // Close applications dialog
+                                setPaymentModalOpen(true);
+                            }}
                         />
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Acceptance Payment Modal */}
+            <AcceptancePaymentModal
+                isOpen={paymentModalOpen}
+                onClose={() => {
+                    setPaymentModalOpen(false);
+                    setSelectedApplication(null);
+                    setStintForPayment(null);
+                }}
+                onPaymentSuccess={() => {
+                    setPaymentModalOpen(false);
+                    setSelectedApplication(null);
+                    setStintForPayment(null);
+                    fetchStints();
+                    toast({
+                        title: "Shift Confirmed!",
+                        description: "Payment successful. The professional has been notified.",
+                    });
+                }}
+                stint={stintForPayment ? {
+                    id: stintForPayment.id,
+                    role: stintForPayment.role,
+                    shiftDate: stintForPayment.shiftDate?.toDate ? stintForPayment.shiftDate.toDate() : new Date(stintForPayment.shiftDate),
+                    startTime: stintForPayment.startTime,
+                    endTime: stintForPayment.endTime,
+                    city: stintForPayment.city,
+                    offeredRate: selectedApplication?.bidAmount || stintForPayment.offeredRate,
+                    currency: stintForPayment.currency || 'KES',
+                    employerName: userProfile?.facilityName || 'Employer',
+                } : null}
+                application={selectedApplication ? {
+                    id: selectedApplication.id,
+                    professionalId: selectedApplication.professionalId,
+                    professionalName: selectedApplication.professionalName,
+                    bidAmount: selectedApplication.bidAmount,
+                } : null}
+                employerId={employerId}
+                employerEmail={user?.email || ''}
+            />
         </>
     )
 }

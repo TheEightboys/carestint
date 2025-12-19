@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -39,7 +39,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { addStint } from "@/lib/firebase/firestore";
+import { addStint, getEmployerById } from "@/lib/firebase/firestore";
 import { moderateStintPosting, calculateSettlement } from "@/lib/automation-service";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ProfessionalRole, ShiftType, UrgencyType } from "@/lib/types";
@@ -60,6 +60,7 @@ const formSchema = z.object({
   profession: z.string().min(1, "Profession is required"),
   shiftType: z.string().min(1, "Shift type is required"),
   shiftDate: z.date({ required_error: "Shift date is required" }),
+  shiftEndDate: z.date().optional(), // For multi-day stint coverage
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   city: z.string().min(1, "City is required"),
@@ -88,6 +89,33 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
 
   // Currency state
   const [currency, setCurrency] = useState<'KSh' | 'UGX' | 'TZS'>('KSh');
+
+  // Multi-day stint mode
+  const [isMultiDay, setIsMultiDay] = useState(false);
+
+  // Employer signup date for promo validation
+  const [employerSignupDate, setEmployerSignupDate] = useState<Date>(new Date());
+
+  // Fetch employer data on mount to get actual signup date
+  useEffect(() => {
+    const fetchEmployerData = async () => {
+      if (employerId && employerId !== 'demo-employer') {
+        try {
+          const employer = await getEmployerById(employerId);
+          if (employer?.createdAt) {
+            // Handle Firestore Timestamp or Date
+            const signupDate = employer.createdAt.toDate
+              ? employer.createdAt.toDate()
+              : new Date(employer.createdAt);
+            setEmployerSignupDate(signupDate);
+          }
+        } catch (error) {
+          console.error('Error fetching employer data:', error);
+        }
+      }
+    };
+    fetchEmployerData();
+  }, [employerId]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -129,7 +157,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
       const eligibility = await canEmployerUsePromotion(
         matchedPromo.id!,
         employerId,
-        new Date() // Use current date as employer signup date for checking
+        employerSignupDate // Use actual employer signup date for promo validation
       );
 
       if (!eligibility.canUse) {
@@ -166,10 +194,6 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
       const role = ROLE_MAP[data.profession] || "other";
       const shiftType: ShiftType = data.shiftType === "Half-day" ? "half-day" : "full-day";
 
-      // Calculate if this is urgent (less than 48 hours notice)
-      const hoursUntilShift = (data.shiftDate.getTime() - Date.now()) / (1000 * 60 * 60);
-      const urgency: UrgencyType = hoursUntilShift < 48 ? "urgent" : "normal";
-
       // Run moderation check
       const moderation = moderateStintPosting({
         role,
@@ -193,30 +217,67 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
         setModerationWarnings(moderation.flagReasons);
       }
 
-      // Save to Firestore
-      const stintId = await addStint({
-        employerId,
-        employerName,
-        role,
-        shiftType,
-        shiftDate: data.shiftDate,
-        startTime: data.startTime,
-        endTime: data.endTime,
-        description: data.description,
-        city: data.city,
-        offeredRate: data.rate,
-        currency: currency,
-        allowBids: data.allowBids,
-        urgency,
-      });
+      // Generate dates array for multi-day or single day
+      const dates: Date[] = [];
+      if (isMultiDay && data.shiftEndDate) {
+        // Generate all dates between start and end (inclusive)
+        const currentDate = new Date(data.shiftDate);
+        const endDate = new Date(data.shiftEndDate);
+        while (currentDate <= endDate) {
+          dates.push(new Date(currentDate));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      } else {
+        dates.push(data.shiftDate);
+      }
 
-      toast({
-        title: "Stint Posted Successfully!",
-        description: `Your ${data.profession} stint for ${format(data.shiftDate, "PPP")} has been posted. ID: ${stintId.slice(0, 8)}...`,
-      });
+      // Generate a unique date range ID for multi-day stints
+      const dateRangeId = isMultiDay ? `dr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : undefined;
+
+      // Create stints for each date
+      const createdStintIds: string[] = [];
+      for (const shiftDate of dates) {
+        // Calculate if this is urgent (less than 48 hours notice)
+        const hoursUntilShift = (shiftDate.getTime() - Date.now()) / (1000 * 60 * 60);
+        const urgency: UrgencyType = hoursUntilShift < 48 ? "urgent" : "normal";
+
+        const stintId = await addStint({
+          employerId,
+          employerName,
+          role,
+          shiftType,
+          shiftDate,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          description: data.description,
+          city: data.city,
+          offeredRate: data.rate,
+          currency: currency,
+          allowBids: data.allowBids,
+          urgency,
+          // Multi-day stint fields
+          isMultiDay: isMultiDay && dates.length > 1,
+          dateRangeId,
+        });
+        createdStintIds.push(stintId);
+      }
+
+      // Show success toast
+      if (dates.length > 1) {
+        toast({
+          title: `${dates.length} Stints Posted!`,
+          description: `Multi-day coverage from ${format(data.shiftDate, "PP")} to ${format(data.shiftEndDate!, "PP")} has been created.`,
+        });
+      } else {
+        toast({
+          title: "Stint Posted Successfully!",
+          description: `Your ${data.profession} stint for ${format(data.shiftDate, "PPP")} has been posted.`,
+        });
+      }
 
       form.reset();
       setModerationWarnings([]);
+      setIsMultiDay(false);
     } catch (error) {
       console.error("Error posting stint:", error);
       toast({
@@ -308,7 +369,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               name="shiftDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Shift Date</FormLabel>
+                  <FormLabel>{isMultiDay ? 'Start Date' : 'Shift Date'}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -345,6 +406,75 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               )}
             />
 
+            {/* Multi-Day Stint Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Multi-Day Coverage</label>
+                <p className="text-xs text-muted-foreground">Need coverage for multiple consecutive days?</p>
+              </div>
+              <Switch
+                checked={isMultiDay}
+                onCheckedChange={(checked) => {
+                  setIsMultiDay(checked);
+                  if (!checked) {
+                    form.setValue('shiftEndDate', undefined);
+                  }
+                }}
+              />
+            </div>
+
+            {/* End Date picker for multi-day */}
+            {isMultiDay && (
+              <FormField
+                control={form.control}
+                name="shiftEndDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick end date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => {
+                            const startDate = form.getValues('shiftDate');
+                            return date < (startDate || new Date(new Date().setHours(0, 0, 0, 0)));
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    {/* Show preview of how many stints will be created */}
+                    {field.value && form.getValues('shiftDate') && (
+                      <p className="text-xs text-accent mt-1">
+                        📅 This will create {Math.ceil((field.value.getTime() - form.getValues('shiftDate').getTime()) / (1000 * 60 * 60 * 24)) + 1} individual stints
+                      </p>
+                    )}
+                  </FormItem>
+                )}
+              />
+            )}
+
             {/* Time and City Fields */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <FormField
@@ -378,18 +508,56 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>City/Town</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select city/town" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Nairobi">Nairobi</SelectItem>
-                        <SelectItem value="Mombasa">Mombasa</SelectItem>
-                        <SelectItem value="Kisumu">Kisumu</SelectItem>
-                        <SelectItem value="Nakuru">Nakuru</SelectItem>
-                        <SelectItem value="Eldoret">Eldoret</SelectItem>
-                        <SelectItem value="Thika">Thika</SelectItem>
+                        {/* Kenya */}
+                        <SelectItem value="Nairobi">🇰🇪 Nairobi</SelectItem>
+                        <SelectItem value="Mombasa">🇰🇪 Mombasa</SelectItem>
+                        <SelectItem value="Kisumu">🇰🇪 Kisumu</SelectItem>
+                        <SelectItem value="Nakuru">🇰🇪 Nakuru</SelectItem>
+                        <SelectItem value="Eldoret">🇰🇪 Eldoret</SelectItem>
+                        <SelectItem value="Thika">🇰🇪 Thika</SelectItem>
+                        <SelectItem value="Malindi">🇰🇪 Malindi</SelectItem>
+                        <SelectItem value="Kitale">🇰🇪 Kitale</SelectItem>
+                        <SelectItem value="Garissa">🇰🇪 Garissa</SelectItem>
+                        <SelectItem value="Nyeri">🇰🇪 Nyeri</SelectItem>
+                        <SelectItem value="Machakos">🇰🇪 Machakos</SelectItem>
+                        <SelectItem value="Meru">🇰🇪 Meru</SelectItem>
+                        <SelectItem value="Lamu">🇰🇪 Lamu</SelectItem>
+                        <SelectItem value="Naivasha">🇰🇪 Naivasha</SelectItem>
+                        <SelectItem value="Kakamega">🇰🇪 Kakamega</SelectItem>
+                        <SelectItem value="Bungoma">🇰🇪 Bungoma</SelectItem>
+                        <SelectItem value="Kisii">🇰🇪 Kisii</SelectItem>
+                        <SelectItem value="Migori">🇰🇪 Migori</SelectItem>
+                        <SelectItem value="Embu">🇰🇪 Embu</SelectItem>
+                        <SelectItem value="Kericho">🇰🇪 Kericho</SelectItem>
+                        <SelectItem value="Nanyuki">🇰🇪 Nanyuki</SelectItem>
+                        {/* Uganda */}
+                        <SelectItem value="Kampala">🇺🇬 Kampala</SelectItem>
+                        <SelectItem value="Entebbe">🇺🇬 Entebbe</SelectItem>
+                        <SelectItem value="Jinja">🇺🇬 Jinja</SelectItem>
+                        <SelectItem value="Mbarara">🇺🇬 Mbarara</SelectItem>
+                        <SelectItem value="Gulu">🇺🇬 Gulu</SelectItem>
+                        <SelectItem value="Lira">🇺🇬 Lira</SelectItem>
+                        <SelectItem value="Mbale">🇺🇬 Mbale</SelectItem>
+                        <SelectItem value="Masaka">🇺🇬 Masaka</SelectItem>
+                        <SelectItem value="Soroti">🇺🇬 Soroti</SelectItem>
+                        <SelectItem value="Fort Portal">🇺🇬 Fort Portal</SelectItem>
+                        {/* Tanzania */}
+                        <SelectItem value="Dar es Salaam">🇹🇿 Dar es Salaam</SelectItem>
+                        <SelectItem value="Dodoma">🇹🇿 Dodoma</SelectItem>
+                        <SelectItem value="Arusha">🇹🇿 Arusha</SelectItem>
+                        <SelectItem value="Mwanza">🇹🇿 Mwanza</SelectItem>
+                        <SelectItem value="Zanzibar City">🇹🇿 Zanzibar City</SelectItem>
+                        <SelectItem value="Tanga">🇹🇿 Tanga</SelectItem>
+                        <SelectItem value="Moshi">🇹🇿 Moshi</SelectItem>
+                        <SelectItem value="Morogoro">🇹🇿 Morogoro</SelectItem>
+                        <SelectItem value="Mbeya">🇹🇿 Mbeya</SelectItem>
+                        <SelectItem value="Tabora">🇹🇿 Tabora</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -20,14 +20,23 @@ import { useUser } from '@/lib/user-context';
 const formSchema = z.object({
   facilityName: z.string().min(2, "Facility name is required"),
   facilityType: z.string().min(1, "Facility type is required"),
+  // Multi-location: single or multi-site
+  siteType: z.enum(['single-site', 'multi-site'], { required_error: "Please select if you have one or multiple locations" }),
+  // First location details
+  locationName: z.string().min(2, "Location name is required (e.g., Main Branch, Westlands)"),
+  streetArea: z.string().min(2, "Street/Area/Landmark is required"),
+  city: z.string().min(2, "Town/City is required"),
+  country: z.string().default("Kenya"),
+  // Contact
   contactPerson: z.string().min(2, "Contact person is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().min(10, "A valid phone number is required"),
-  city: z.string().min(2, "City is required"),
   operatingDays: z.string().min(1, "Operating days are required"),
   staffSize: z.string().min(1, "Staff size is required"),
+  // License
   licenseNumber: z.string().min(5, "A valid business license number is required"),
   licenseDocument: z.string().optional(),
+  // Billing
   payoutMethod: z.string().min(1, "Payout method is required"),
   billingEmail: z.string().email("Invalid billing email address"),
 });
@@ -35,10 +44,12 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const steps = [
-  { id: 1, title: 'Facility Details', fields: ['facilityName', 'facilityType', 'contactPerson', 'email', 'phone', 'city', 'operatingDays', 'staffSize'] },
-  { id: 2, title: 'Business License', fields: ['licenseNumber', 'licenseDocument'] },
-  { id: 3, title: 'Billing & Payout', fields: ['payoutMethod', 'billingEmail'] },
-  { id: 4, title: 'Review & Submit' },
+  { id: 1, title: 'Facility Info', fields: ['facilityName', 'facilityType', 'siteType'] },
+  { id: 2, title: 'Location Details', fields: ['locationName', 'streetArea', 'city', 'country'] },
+  { id: 3, title: 'Contact & Operations', fields: ['contactPerson', 'email', 'phone', 'operatingDays', 'staffSize'] },
+  { id: 4, title: 'Business License', fields: ['licenseNumber', 'licenseDocument'] },
+  { id: 5, title: 'Billing & Payout', fields: ['payoutMethod', 'billingEmail'] },
+  { id: 6, title: 'Review & Submit' },
 ];
 
 export function EmployerOnboardingForm() {
@@ -100,10 +111,14 @@ export function EmployerOnboardingForm() {
     defaultValues: {
       facilityName: '',
       facilityType: '',
+      siteType: undefined,
+      locationName: '',
+      streetArea: '',
+      city: '',
+      country: 'Kenya',
       contactPerson: searchParams.get('name') || '',
       email: searchParams.get('email') || '',
       phone: searchParams.get('phone') || '',
-      city: '',
       operatingDays: '',
       staffSize: '',
       licenseNumber: '',
@@ -168,34 +183,103 @@ export function EmployerOnboardingForm() {
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Step 1: Facility Info */}
           {currentStep === 1 && (
+            <div className="space-y-6 animate-in fade-in-50">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField name="facilityName" control={form.control} render={({ field }) => (
+                  <FormItem><FormLabel>Facility Name</FormLabel><FormControl><Input placeholder="e.g., City Health Clinic" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="facilityType" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type of Facility</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select facility type" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="hospital">Hospital</SelectItem>
+                        <SelectItem value="clinic">Clinic</SelectItem>
+                        <SelectItem value="dental-clinic">Dental Clinic</SelectItem>
+                        <SelectItem value="nursing-home">Nursing Home</SelectItem>
+                        <SelectItem value="lab">Laboratory</SelectItem>
+                        <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                        <SelectItem value="maternity">Maternity Center</SelectItem>
+                        <SelectItem value="diagnostic">Diagnostic Center</SelectItem>
+                        <SelectItem value="rehab">Rehabilitation Center</SelectItem>
+                        <SelectItem value="hospice">Hospice</SelectItem>
+                        <SelectItem value="urgent-care">Urgent Care Center</SelectItem>
+                        <SelectItem value="other">Other Healthcare Facility</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="space-y-3">
+                <FormLabel className="text-base font-semibold">How many locations does your facility have?</FormLabel>
+                <p className="text-sm text-muted-foreground">This helps us set up your account correctly. Single-site facilities cannot add more locations later.</p>
+                <FormField name="siteType" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div
+                        onClick={() => field.onChange('single-site')}
+                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${field.value === 'single-site' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50'}`}
+                      >
+                        <div className="font-medium">🏥 Single Location</div>
+                        <p className="text-sm text-muted-foreground mt-1">One facility at one address</p>
+                      </div>
+                      <div
+                        onClick={() => field.onChange('multi-site')}
+                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${field.value === 'multi-site' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50'}`}
+                      >
+                        <div className="font-medium">🏢 Multiple Locations</div>
+                        <p className="text-sm text-muted-foreground mt-1">Multiple branches under same license</p>
+                      </div>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Location Details */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-in fade-in-50">
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="text-sm">📍 Enter details for your <strong>main location</strong>. {getValues().siteType === 'multi-site' && 'You can add more locations after account setup.'}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField name="locationName" control={form.control} render={({ field }) => (
+                  <FormItem><FormLabel>Location Name</FormLabel><FormControl><Input placeholder="e.g., Main Branch, Westlands, CBD" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="streetArea" control={form.control} render={({ field }) => (
+                  <FormItem><FormLabel>Street / Area / Landmark</FormLabel><FormControl><Input placeholder="e.g., Kenyatta Avenue, Near City Hall" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="city" control={form.control} render={({ field }) => (
+                  <FormItem><FormLabel>Town / City</FormLabel><FormControl><Input placeholder="e.g., Nairobi" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="country" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || 'Kenya'}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="Kenya">🇰🇪 Kenya</SelectItem>
+                        <SelectItem value="Uganda">🇺🇬 Uganda</SelectItem>
+                        <SelectItem value="Tanzania">🇹🇿 Tanzania</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Contact & Operations */}
+          {currentStep === 3 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-in fade-in-50">
-              <FormField name="facilityName" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Facility Name</FormLabel><FormControl><Input placeholder="e.g., City Health Clinic" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField name="facilityType" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type of Facility</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select facility type" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="hospital">Hospital</SelectItem>
-                      <SelectItem value="clinic">Clinic</SelectItem>
-                      <SelectItem value="dental-clinic">Dental Clinic</SelectItem>
-                      <SelectItem value="nursing-home">Nursing Home</SelectItem>
-                      <SelectItem value="lab">Laboratory</SelectItem>
-                      <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                      <SelectItem value="maternity">Maternity Center</SelectItem>
-                      <SelectItem value="diagnostic">Diagnostic Center</SelectItem>
-                      <SelectItem value="rehab">Rehabilitation Center</SelectItem>
-                      <SelectItem value="hospice">Hospice</SelectItem>
-                      <SelectItem value="urgent-care">Urgent Care Center</SelectItem>
-                      <SelectItem value="other">Other Healthcare Facility</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField name="contactPerson" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -204,9 +288,6 @@ export function EmployerOnboardingForm() {
               )} />
               <FormField name="phone" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField name="city" control={form.control} render={({ field }) => (
-                <FormItem><FormLabel>Town / City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField name="operatingDays" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Operating Days</FormLabel><FormControl><Input placeholder="e.g., Mon - Fri" {...field} /></FormControl><FormMessage /></FormItem>
@@ -217,7 +298,8 @@ export function EmployerOnboardingForm() {
             </div>
           )}
 
-          {currentStep === 2 && (
+          {/* Step 4: Business License */}
+          {currentStep === 4 && (
             <div className="animate-in fade-in-50 space-y-4">
               <FormField name="licenseNumber" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Business License Number</FormLabel><FormControl><Input placeholder="Enter your facility's business license number" {...field} /></FormControl><FormMessage /></FormItem>
@@ -234,7 +316,8 @@ export function EmployerOnboardingForm() {
             </div>
           )}
 
-          {currentStep === 3 && (
+          {/* Step 5: Billing & Payout */}
+          {currentStep === 5 && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-in fade-in-50">
               <FormField name="payoutMethod" control={form.control} render={({ field }) => (
                 <FormItem>
@@ -255,7 +338,8 @@ export function EmployerOnboardingForm() {
             </div>
           )}
 
-          {currentStep === 4 && (
+          {/* Step 6: Review & Submit */}
+          {currentStep === 6 && (
             <div className="space-y-4 animate-in fade-in-50">
               <h3 className="font-headline text-lg font-semibold">Review Your Details</h3>
               <div className="rounded-lg border p-4 space-y-2 text-sm">

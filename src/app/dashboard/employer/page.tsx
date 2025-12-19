@@ -187,7 +187,14 @@ export default function EmployerDashboardPage() {
                                     <span>Facility Profile</span>
                                 </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/employer/orders" className="cursor-pointer">
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    <span>Order History</span>
+                                </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
+
                             <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Sign out</span>

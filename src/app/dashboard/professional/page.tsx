@@ -197,7 +197,20 @@ export default function ProfessionalDashboardPage() {
                                     <span>Profile</span>
                                 </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/professional/earnings" className="cursor-pointer">
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    <span>Earnings & Payouts</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/professional/orders" className="cursor-pointer">
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    <span>Work History</span>
+                                </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
+
                             <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
                                 <LogOut className="mr-2 h-4 w-4" />
                                 <span>Sign out</span>

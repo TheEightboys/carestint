@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
 import { storage, db } from "@/lib/firebase/clientApp";
+import { createProfileUpdateRequest } from "@/lib/firebase/firestore";
 
 interface ProfessionalData {
   id: string;
@@ -146,18 +147,52 @@ export function ProfessionalProfile({ professional }: ProfessionalProfileProps) 
     }
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    toast({
-      title: "Change Request Submitted",
-      description: "A CareStint admin will review your request and contact you within 24-48 hours.",
-    });
+    try {
+      // Get current value for the selected field
+      const fieldValueMap: Record<string, string> = {
+        fullName: professional.fullName || '',
+        email: professional.email || '',
+        phone: professional.phone || '',
+        primaryRole: professional.primaryRole || '',
+        licenseNumber: professional.licenseNumber || '',
+        licenseExpiryDate: professional.licenseExpiryDate || '',
+        locations: professional.locations || '',
+        other: '',
+      };
 
-    setRequestDialogOpen(false);
-    setSelectedField('');
-    setRequestReason('');
-    setIsSubmitting(false);
+      const requestId = await createProfileUpdateRequest({
+        requesterType: 'professional',
+        requesterId: professional.id,
+        requesterName: professional.fullName || 'Unknown',
+        requesterEmail: professional.email || '',
+        fieldToUpdate: selectedField,
+        currentValue: fieldValueMap[selectedField] || '',
+        reason: requestReason.trim(),
+      });
+
+      if (requestId) {
+        toast({
+          title: "Change Request Submitted",
+          description: "Your request has been submitted. A CareStint admin will review it and contact you within 24-48 hours.",
+        });
+
+        setRequestDialogOpen(false);
+        setSelectedField('');
+        setRequestReason('');
+      } else {
+        throw new Error('Failed to submit request');
+      }
+    } catch (error) {
+      console.error('Error submitting profile update request:', error);
+      toast({
+        title: "Request Failed",
+        description: "Failed to submit your request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getRoleLabel = (role?: string) => {
