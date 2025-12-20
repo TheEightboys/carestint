@@ -35,7 +35,7 @@ const formSchema = z.object({
   staffSize: z.string().min(1, "Staff size is required"),
   // License
   licenseNumber: z.string().min(5, "A valid business license number is required"),
-  licenseExpiryDate: z.string().optional(),
+  licenseExpiryDate: z.string().min(1, "License expiry date is required"),
   licenseDocument: z.string().optional(),
   // Billing
   payoutMethod: z.string().min(1, "Payout method is required"),
@@ -308,7 +308,7 @@ export function EmployerOnboardingForm() {
               )} />
               <FormField name="licenseExpiryDate" control={form.control} render={({ field }) => (
                 <FormItem>
-                  <FormLabel>License Expiry Date (Optional)</FormLabel>
+                  <FormLabel>License Expiry Date</FormLabel>
                   <FormControl>
                     <Input type="date" placeholder="Select expiry date" {...field} />
                   </FormControl>
