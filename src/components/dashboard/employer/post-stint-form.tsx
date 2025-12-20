@@ -60,7 +60,7 @@ const formSchema = z.object({
   profession: z.string().min(1, "Profession is required"),
   shiftType: z.string().min(1, "Shift type is required"),
   shiftDate: z.date({ required_error: "Shift date is required" }),
-  shiftEndDate: z.date().optional(), // For multi-day stint coverage
+  shiftDates: z.array(z.date()).optional(), // For selecting specific multiple dates
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   city: z.string().min(1, "City is required"),
@@ -89,9 +89,6 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
 
   // Currency state
   const [currency, setCurrency] = useState<'KSh' | 'UGX' | 'TZS'>('KSh');
-
-  // Multi-day stint mode
-  const [isMultiDay, setIsMultiDay] = useState(false);
 
   // Employer signup date for promo validation
   const [employerSignupDate, setEmployerSignupDate] = useState<Date>(new Date());
@@ -217,22 +214,27 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
         setModerationWarnings(moderation.flagReasons);
       }
 
-      // Generate dates array for multi-day or single day
+      // Get dates array - prioritize shiftDates array, fallback to single shiftDate
       const dates: Date[] = [];
-      if (isMultiDay && data.shiftEndDate) {
-        // Generate all dates between start and end (inclusive)
-        const currentDate = new Date(data.shiftDate);
-        const endDate = new Date(data.shiftEndDate);
-        while (currentDate <= endDate) {
-          dates.push(new Date(currentDate));
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-      } else {
+      if (data.shiftDates && data.shiftDates.length > 0) {
+        // Use the specifically selected dates
+        dates.push(...data.shiftDates);
+      } else if (data.shiftDate) {
         dates.push(data.shiftDate);
       }
 
-      // Generate a unique date range ID for multi-day stints
-      const dateRangeId = isMultiDay ? `dr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : undefined;
+      if (dates.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one date for the shift.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Generate a unique date range ID for multi-day stints (to group related stints)
+      const dateRangeId = dates.length > 1 ? `dr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : undefined;
 
       // Create stints for each date
       const createdStintIds: string[] = [];
@@ -256,7 +258,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
           allowBids: data.allowBids,
           urgency,
           // Multi-day stint fields
-          isMultiDay: isMultiDay && dates.length > 1,
+          isMultiDay: dates.length > 1,
           dateRangeId,
         });
         createdStintIds.push(stintId);
@@ -264,20 +266,20 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
 
       // Show success toast
       if (dates.length > 1) {
+        const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
         toast({
           title: `${dates.length} Stints Posted!`,
-          description: `Multi-day coverage from ${format(data.shiftDate, "PP")} to ${format(data.shiftEndDate!, "PP")} has been created.`,
+          description: `Coverage for ${dates.length} selected dates has been created.`,
         });
       } else {
         toast({
           title: "Stint Posted Successfully!",
-          description: `Your ${data.profession} stint for ${format(data.shiftDate, "PPP")} has been posted.`,
+          description: `Your ${data.profession} stint for ${format(dates[0], "PPP")} has been posted.`,
         });
       }
 
       form.reset();
       setModerationWarnings([]);
-      setIsMultiDay(false);
     } catch (error) {
       console.error("Error posting stint:", error);
       toast({
@@ -364,116 +366,119 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 )}
               />
             </div>
+            {/* Shift Dates Selection - Always visible calendar for selecting one or more dates */}
             <FormField
               control={form.control}
-              name="shiftDate"
+              name="shiftDates"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>{isMultiDay ? 'Start Date' : 'Shift Date'}</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4}>
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                  <FormLabel className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    Select Shift Date(s)
+                  </FormLabel>
+                  <FormDescription className="text-xs">
+                    Click on one or more dates to create shifts. Role, pay rate, hours, and location will be the same for all selected dates.
+                  </FormDescription>
+                  <div className="rounded-lg border p-4 bg-card">
+                    <Calendar
+                      mode="multiple"
+                      selected={field.value || []}
+                      onSelect={(dates) => {
+                        field.onChange(dates);
+                        // Also update the primary shiftDate to the earliest selected date for form validation
+                        if (dates && dates.length > 0) {
+                          const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
+                          form.setValue('shiftDate', sortedDates[0]);
+                        } else {
+                          form.setValue('shiftDate', undefined as any);
                         }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                      }}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      numberOfMonths={1}
+                      className="rounded-md"
+                      classNames={{
+                        months: "flex flex-col sm:flex-row gap-4",
+                        month: "flex flex-col gap-4",
+                        month_caption: "flex justify-center pt-1 relative items-center",
+                        caption_label: "text-sm font-medium",
+                        nav: "flex items-center gap-1",
+                        month_grid: "w-full border-collapse",
+                        weekdays: "flex",
+                        weekday: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
+                        week: "flex w-full mt-2",
+                        day: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                        day_button: "h-9 w-9 p-0 font-normal hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground",
+                        selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
+                        today: "bg-accent text-accent-foreground rounded-md",
+                        outside: "text-muted-foreground opacity-50",
+                        disabled: "text-muted-foreground opacity-50 cursor-not-allowed",
+                      }}
+                    />
+
+                    {/* Display selected dates as chips */}
+                    {field.value && field.value.length > 0 ? (
+                      <div className="mt-4 pt-4 border-t space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-primary">
+                            ✓ {field.value.length} date{field.value.length > 1 ? 's' : ''} selected
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange([]);
+                              form.setValue('shiftDate', undefined as any);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {[...field.value]
+                            .sort((a, b) => a.getTime() - b.getTime())
+                            .map((date, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full border border-primary/20"
+                              >
+                                {format(date, "EEE, MMM d")}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newDates = field.value?.filter((d) => d.getTime() !== date.getTime());
+                                    field.onChange(newDates);
+                                    if (newDates && newDates.length > 0) {
+                                      const sortedDates = [...newDates].sort((a, b) => a.getTime() - b.getTime());
+                                      form.setValue('shiftDate', sortedDates[0]);
+                                    } else {
+                                      form.setValue('shiftDate', undefined as any);
+                                    }
+                                  }}
+                                  className="hover:text-destructive transition-colors"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </span>
+                            ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-md">
+                          📋 {field.value.length} independent shift{field.value.length > 1 ? 's' : ''} will be created. Professionals can accept any or all dates.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 pt-4 border-t">
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Click on dates above to select them
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            {/* Multi-Day Stint Toggle */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-              <div className="space-y-0.5">
-                <label className="text-sm font-medium">Multi-Day Coverage</label>
-                <p className="text-xs text-muted-foreground">Need coverage for multiple consecutive days?</p>
-              </div>
-              <Switch
-                checked={isMultiDay}
-                onCheckedChange={(checked) => {
-                  setIsMultiDay(checked);
-                  if (!checked) {
-                    form.setValue('shiftEndDate', undefined);
-                  }
-                }}
-              />
-            </div>
-
-            {/* End Date picker for multi-day */}
-            {isMultiDay && (
-              <FormField
-                control={form.control}
-                name="shiftEndDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>End Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick end date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4}>
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => {
-                            const startDate = form.getValues('shiftDate');
-                            return date < (startDate || new Date(new Date().setHours(0, 0, 0, 0)));
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    {/* Show preview of how many stints will be created */}
-                    {field.value && form.getValues('shiftDate') && (
-                      <p className="text-xs text-accent mt-1">
-                        📅 This will create {Math.ceil((field.value.getTime() - form.getValues('shiftDate').getTime()) / (1000 * 60 * 60 * 24)) + 1} individual stints
-                      </p>
-                    )}
-                  </FormItem>
-                )}
-              />
-            )}
 
             {/* Time and City Fields */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
