@@ -707,13 +707,18 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 <Info className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-base font-semibold">Fee Calculation</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground space-y-1 pt-0">
-                <div className="flex justify-between">
-                  <span>Normal Notice Fee (15%):</span>
+              <CardContent className="text-sm text-muted-foreground space-y-2 pt-0">
+                {/* Normal Fee */}
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span>Normal Notice Fee (15%)</span>
+                    <p className="text-xs text-muted-foreground">24+ hours advance notice</p>
+                  </div>
                   <span className={`font-medium ${promoDiscount > 0 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                     {currency} {normalFee.toLocaleString()}
                   </span>
                 </div>
+
                 {promoDiscount > 0 && (
                   <>
                     <div className="flex justify-between text-green-600">
@@ -726,10 +731,16 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                     </div>
                   </>
                 )}
-                <div className="flex justify-between">
-                  <span>Urgent Notice Fee (20%):</span>
-                  <span className="font-medium text-foreground">{currency} {urgentFee.toLocaleString()}</span>
+
+                {/* Urgent Fee */}
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-amber-600 dark:text-amber-500">Urgent Notice Fee (20%)</span>
+                    <p className="text-xs text-muted-foreground">Less than 24 hours notice</p>
+                  </div>
+                  <span className="font-medium text-amber-600 dark:text-amber-500">{currency} {urgentFee.toLocaleString()}</span>
                 </div>
+
                 {watchedRate > 0 && (
                   <>
                     <hr className="my-2" />
@@ -739,7 +750,10 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                     </div>
                   </>
                 )}
-                <p className="pt-2 text-xs">The final fee is determined by how far in advance the stint is booked.</p>
+
+                <p className="pt-2 text-xs bg-muted/50 p-2 rounded-md">
+                  💡 <strong>Tip:</strong> Post shifts with 24+ hours notice to pay only 15% fee instead of 20%.
+                </p>
               </CardContent>
             </Card>
 
