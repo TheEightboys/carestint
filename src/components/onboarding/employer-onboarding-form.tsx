@@ -35,6 +35,7 @@ const formSchema = z.object({
   staffSize: z.string().min(1, "Staff size is required"),
   // License
   licenseNumber: z.string().min(5, "A valid business license number is required"),
+  licenseExpiryDate: z.string().optional(),
   licenseDocument: z.string().optional(),
   // Billing
   payoutMethod: z.string().min(1, "Payout method is required"),
@@ -47,7 +48,7 @@ const steps = [
   { id: 1, title: 'Facility Info', fields: ['facilityName', 'facilityType', 'siteType'] },
   { id: 2, title: 'Location Details', fields: ['locationName', 'streetArea', 'city', 'country'] },
   { id: 3, title: 'Contact & Operations', fields: ['contactPerson', 'email', 'phone', 'operatingDays', 'staffSize'] },
-  { id: 4, title: 'Business License', fields: ['licenseNumber', 'licenseDocument'] },
+  { id: 4, title: 'Business License', fields: ['licenseNumber', 'licenseExpiryDate', 'licenseDocument'] },
   { id: 5, title: 'Billing & Payout', fields: ['payoutMethod', 'billingEmail'] },
   { id: 6, title: 'Review & Submit' },
 ];
@@ -122,6 +123,7 @@ export function EmployerOnboardingForm() {
       operatingDays: '',
       staffSize: '',
       licenseNumber: '',
+      licenseExpiryDate: '',
       licenseDocument: '',
       payoutMethod: '',
       billingEmail: searchParams.get('email') || '',
@@ -303,6 +305,16 @@ export function EmployerOnboardingForm() {
             <div className="animate-in fade-in-50 space-y-4">
               <FormField name="licenseNumber" control={form.control} render={({ field }) => (
                 <FormItem><FormLabel>Business License Number</FormLabel><FormControl><Input placeholder="Enter your facility's business license number" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField name="licenseExpiryDate" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>License Expiry Date (Optional)</FormLabel>
+                  <FormControl>
+                    <Input type="date" placeholder="Select expiry date" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">When does your business license expire?</p>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField name="licenseDocument" control={form.control} render={({ field }) => (
                 <FormItem>

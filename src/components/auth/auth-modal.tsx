@@ -488,12 +488,12 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
                   <div className="space-y-2">
                     <Label htmlFor="fullName" className="flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      Full Name
+                      {userType === 'employer' ? 'Contact Person' : 'Full Name'}
                     </Label>
                     <Input
                       id="fullName"
                       type="text"
-                      placeholder="John Doe"
+                      placeholder={userType === 'employer' ? 'Jane Smith' : 'John Doe'}
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
@@ -507,16 +507,21 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
                     <Input
                       id="signupEmail"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder={userType === 'employer' ? 'accounts@clinicname.com' : 'you@example.com'}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
                     />
+                    {userType === 'employer' && (
+                      <p className="text-xs text-muted-foreground">
+                        This email will receive account verification and system notifications
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signupPassword" className="flex items-center gap-2">
                       <Lock className="h-4 w-4" />
-                      Password
+                      {userType === 'employer' ? 'Create a Temporary Password' : 'Password'}
                     </Label>
                     <Input
                       id="signupPassword"
@@ -527,6 +532,11 @@ export function AuthModal({ isOpen, onOpenChange, userType, defaultMode = 'signi
                       required
                       minLength={6}
                     />
+                    {userType === 'employer' && (
+                      <p className="text-xs text-muted-foreground">
+                        Used to secure your account during signup. You can update it later.
+                      </p>
+                    )}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? <Loader2 className="animate-spin mr-2" /> : <User className="mr-2 h-4 w-4" />}

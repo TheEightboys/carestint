@@ -415,7 +415,7 @@ export default function ProfessionalEarningsPage() {
                             <CardHeader>
                                 <CardTitle>Payment Details</CardTitle>
                                 <CardDescription>
-                                    Set up how you want to receive your earnings. Employers will see these details.
+                                    Set up how you want to receive your earnings.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
@@ -426,8 +426,8 @@ export default function ProfessionalEarningsPage() {
                                         <div
                                             onClick={() => setPaymentMethod('mpesa')}
                                             className={`p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'mpesa'
-                                                    ? 'border-accent bg-accent/10'
-                                                    : 'hover:border-muted-foreground/50'
+                                                ? 'border-accent bg-accent/10'
+                                                : 'hover:border-muted-foreground/50'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
@@ -441,8 +441,8 @@ export default function ProfessionalEarningsPage() {
                                         <div
                                             onClick={() => setPaymentMethod('bank')}
                                             className={`p-4 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'bank'
-                                                    ? 'border-accent bg-accent/10'
-                                                    : 'hover:border-muted-foreground/50'
+                                                ? 'border-accent bg-accent/10'
+                                                : 'hover:border-muted-foreground/50'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
@@ -550,20 +550,7 @@ export default function ProfessionalEarningsPage() {
                                     )}
                                 </Button>
 
-                                {/* Info Note */}
-                                <div className="p-4 rounded-lg bg-muted border text-sm">
-                                    <div className="flex items-start gap-3">
-                                        <AlertCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="font-medium">Important</p>
-                                            <p className="text-muted-foreground mt-1">
-                                                Your payment details are visible to employers after you complete a shift.
-                                                They can pay you directly via M-Pesa or bank transfer.
-                                                Make sure your details are accurate to avoid payment issues.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+
                             </CardContent>
                         </Card>
                     </TabsContent>

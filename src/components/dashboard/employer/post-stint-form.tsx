@@ -389,7 +389,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4}>
                       <Calendar
                         mode="single"
                         selected={field.value}
@@ -450,7 +450,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-50" align="start" side="bottom" sideOffset={4}>
                         <Calendar
                           mode="single"
                           selected={field.value}

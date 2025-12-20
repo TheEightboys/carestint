@@ -1,9 +1,8 @@
-
 "use client"
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Building, LogOut, PlusCircle, Briefcase, User, Wallet, BarChart3, Loader2, Receipt, FileText, Settings, Calculator, MessageCircle, Home } from "lucide-react";
+import { Building, LogOut, PlusCircle, Briefcase, User, Wallet, BarChart3, Loader2, Receipt, FileText, Settings, Calculator, MessageCircle, Home, ArrowLeft } from "lucide-react";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostStintForm } from "@/components/dashboard/employer/post-stint-form";
@@ -65,7 +64,7 @@ export default function EmployerDashboardPage() {
 
                 // If no employer profile found, user hasn't completed onboarding
                 if (!employerData) {
-                    window.location.href = `/onboarding/employer?email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.displayName || '')}`;
+                    window.location.href = `/ onboarding / employer ? email = ${encodeURIComponent(user.email)}& name=${encodeURIComponent(user.displayName || '')} `;
                     return;
                 }
 
@@ -134,10 +133,15 @@ export default function EmployerDashboardPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
-                <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                    <Home className="h-5 w-5" />
-                    <span className="hidden sm:inline text-sm">Home</span>
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => window.history.back()} className="text-muted-foreground hover:text-foreground">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                        <Home className="h-5 w-5" />
+                        <span className="hidden sm:inline text-sm">Home</span>
+                    </Link>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                         <Building className="h-5 w-5 text-primary" />
@@ -162,9 +166,9 @@ export default function EmployerDashboardPage() {
                                     <AvatarFallback className="bg-primary/10 text-primary">
                                         {employerName?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
                                     </AvatarFallback>
-                                </Avatar>
-                            </Button>
-                        </DropdownMenuTrigger>
+                                </Avatar >
+                            </Button >
+                        </DropdownMenuTrigger >
                         <DropdownMenuContent className="w-56" align="end" forceMount>
                             <DropdownMenuLabel className="font-normal">
                                 <div className="flex flex-col space-y-1">
@@ -200,9 +204,9 @@ export default function EmployerDashboardPage() {
                                 <span>Sign out</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </header>
+                    </DropdownMenu >
+                </div >
+            </header >
             <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-4 md:gap-6 safe-area-x">
                 {/* Stats Cards */}
                 <div className="grid gap-3 grid-cols-2 sm:gap-4 md:grid-cols-4">
@@ -299,7 +303,7 @@ export default function EmployerDashboardPage() {
                     </TabsContent>
                 </Tabs>
             </main>
-        </div>
+        </div >
     );
 }
 

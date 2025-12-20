@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar, Settings, Calculator, MessageCircle, Home } from "lucide-react";
+import { Stethoscope, LogOut, Briefcase, FileText, User, Timer, Wallet, Star, TrendingUp, Loader2, Calendar, Settings, Calculator, MessageCircle, Home, ArrowLeft } from "lucide-react";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,10 +138,15 @@ export default function ProfessionalDashboardPage() {
     return (
         <div className="flex min-h-screen w-full flex-col bg-background">
             <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6">
-                <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                    <Home className="h-5 w-5" />
-                    <span className="hidden sm:inline text-sm">Home</span>
-                </Link>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => window.history.back()} className="text-muted-foreground hover:text-foreground">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+                        <Home className="h-5 w-5" />
+                        <span className="hidden sm:inline text-sm">Home</span>
+                    </Link>
+                </div>
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
                         <Stethoscope className="h-5 w-5 text-accent" />
@@ -163,7 +168,7 @@ export default function ProfessionalDashboardPage() {
                     </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                    <RoleSwitcher variant="compact" />
+                    <RoleSwitcher variant="compact" showAddRole={false} />
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-10 w-10 rounded-full">

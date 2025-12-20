@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Wallet, Download, Calendar, Filter, CheckCircle, Clock, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +31,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { getPayoutsByProfessional } from '@/lib/firebase/firestore';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 interface Earning {
     id: string;
@@ -67,7 +72,7 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
     const [earnings, setEarnings] = useState<Earning[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'completed' | 'pending' | 'processing'>('all');
-    const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     useEffect(() => {
         loadEarnings();
@@ -167,6 +172,18 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
 
     const filteredEarnings = earnings.filter(e => {
         if (filter !== 'all' && e.status !== filter) return false;
+
+        // Apply date range filter
+        if (dateRange?.from) {
+            const shiftDate = e.shiftDate;
+            const rangeStart = startOfDay(dateRange.from);
+            const rangeEnd = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+
+            if (!isWithinInterval(shiftDate, { start: rangeStart, end: rangeEnd })) {
+                return false;
+            }
+        }
+
         return true;
     });
 
@@ -248,7 +265,7 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                 )}
 
                 {/* Filters */}
-                <div className="flex gap-4 mb-4">
+                <div className="flex flex-wrap gap-4 mb-4">
                     <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
                         <SelectTrigger className="w-[140px]">
                             <Filter className="h-4 w-4 mr-2" />
@@ -261,18 +278,51 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                             <SelectItem value="pending">Pending</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select value={period} onValueChange={(v: any) => setPeriod(v)}>
-                        <SelectTrigger className="w-[140px]">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            <SelectValue placeholder="Period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="week">This Week</SelectItem>
-                            <SelectItem value="month">This Month</SelectItem>
-                            <SelectItem value="year">This Year</SelectItem>
-                            <SelectItem value="all">All Time</SelectItem>
-                        </SelectContent>
-                    </Select>
+
+                    {/* Date Range Picker */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className={cn(
+                                    "justify-start text-left font-normal min-w-[200px]",
+                                    !dateRange && "text-muted-foreground"
+                                )}
+                            >
+                                <Calendar className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>
+                                            {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+                                        </>
+                                    ) : (
+                                        format(dateRange.from, "MMM d, yyyy")
+                                    )
+                                ) : (
+                                    <span>Pick date range</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                            />
+                            <div className="p-3 border-t flex justify-between">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setDateRange(undefined)}
+                                >
+                                    Clear
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 {/* Loading State */}
