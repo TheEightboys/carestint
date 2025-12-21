@@ -111,22 +111,8 @@ export function RoleSwitcher({ variant = 'header', showAddRole = true }: RoleSwi
         return role === 'employer' ? 'Employer' : 'Professional';
     };
 
-    // Compact variant - just a button
     if (variant === 'compact') {
         if (!hasBothRoles) {
-            if (canAddSecondRole() && showAddRole) {
-                return (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAddRole}
-                        className="gap-2"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add {dualRoleInfo.hasEmployerRole ? 'Professional' : 'Employer'} Role
-                    </Button>
-                );
-            }
             return null;
         }
 
@@ -205,27 +191,6 @@ export function RoleSwitcher({ variant = 'header', showAddRole = true }: RoleSwi
                                     ? dualRoleInfo.employerStatus
                                     : dualRoleInfo.professionalStatus
                             )}
-                        </div>
-                    </DropdownMenuItem>
-                ) : showAddRole && canAddSecondRole() ? (
-                    <DropdownMenuItem
-                        onClick={handleAddRole}
-                        className="cursor-pointer"
-                    >
-                        <div className="flex items-center gap-2 py-1 w-full">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted border-2 border-dashed border-muted-foreground/30">
-                                <Plus className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium">
-                                    Become a {dualRoleInfo.hasEmployerRole ? 'Professional' : 'Employer'}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {dualRoleInfo.hasEmployerRole
-                                        ? 'Start finding and applying for stints'
-                                        : 'Start posting stints for your facility'}
-                                </p>
-                            </div>
                         </div>
                     </DropdownMenuItem>
                 ) : null}

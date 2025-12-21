@@ -7,7 +7,7 @@ import { Logo } from '@/components/icons/logo';
 import { Button } from '@/components/ui/button';
 import { AuthModal } from '@/components/auth/auth-modal';
 import type { UserType } from '@/components/auth/auth-modal';
-import { Menu, Building, Stethoscope, ArrowRight, LayoutDashboard, LogOut, Loader2, ShieldCheck } from 'lucide-react';
+import { Menu, Building, Stethoscope, ArrowRight, LayoutDashboard, LogOut, Loader2 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationCenter } from '@/components/notification-center';
 import { RoleSwitcher } from '@/components/role-switcher';
@@ -340,23 +340,7 @@ export function Header() {
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
-              {/* Admin Option */}
-              <button
-                onClick={() => {
-                  setUserTypePickerOpen(false);
-                  router.push('/admin/login');
-                }}
-                className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-border/50 hover:border-muted-foreground/50 hover:bg-muted/30 transition-all group text-left"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                    Admin Access
-                  </h3>
-                </div>
-              </button>
+
             </div>
 
             <div className="mt-6 text-center">

@@ -12,7 +12,7 @@ import { FloatingElements } from './floating-elements';
 import { AuthModal } from '@/components/auth/auth-modal';
 import type { UserType } from '@/components/auth/auth-modal';
 import { useUser } from '@/lib/user-context';
-import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, ArrowRight, Building, CheckCircle2, LayoutDashboard, Loader2, Stethoscope, ShieldCheck } from 'lucide-react';
+import { Briefcase, TrendingUp, MapPin, Clock, Sparkles, Users, ArrowRight, Building, CheckCircle2, LayoutDashboard, Loader2, Stethoscope } from 'lucide-react';
 import { gsap } from "gsap";
 
 export function Hero() {
@@ -424,23 +424,7 @@ export function Hero() {
                 <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
 
-              {/* Admin Option */}
-              <button
-                onClick={() => {
-                  setUserTypePickerOpen(false);
-                  router.push('/admin/login');
-                }}
-                className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-border/50 hover:border-muted-foreground/50 hover:bg-muted/30 transition-all group text-left"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                  <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                    Admin Access
-                  </h3>
-                </div>
-              </button>
+
             </div>
 
             <div className="mt-6 text-center">
