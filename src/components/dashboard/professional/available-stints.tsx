@@ -569,13 +569,13 @@ export function AvailableStints({
                     <Slider
                       value={[filters.minRate]}
                       onValueChange={(value) => setFilters(prev => ({ ...prev, minRate: value[0] }))}
-                      max={20000}
-                      step={500}
+                      max={100000}
+                      step={1000}
                       className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>KES 0</span>
-                      <span>KES 20,000</span>
+                      <span>KES 100,000</span>
                     </div>
                   </div>
 

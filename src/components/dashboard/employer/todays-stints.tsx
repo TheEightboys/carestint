@@ -4,20 +4,22 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Clock, MoreVertical, Users, MapPin, Banknote, Loader2, RefreshCw, UserCheck, LogIn, LogOut, Timer, CheckCircle2 } from "lucide-react";
+import { Briefcase, Clock, MoreVertical, Users, MapPin, Banknote, Loader2, RefreshCw, UserCheck, LogIn, LogOut, Timer, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { getStintsByEmployer, getApplicationsByStint } from "@/lib/firebase/firestore";
+import { getStintsByEmployer, getApplicationsByStint, updateStint } from "@/lib/firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/lib/user-context";
 import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { ApplicationsManager } from "./applications-manager";
 import { AcceptancePaymentModal } from "./acceptance-payment-modal";
 
@@ -84,6 +86,12 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
     const [selectedApplication, setSelectedApplication] = useState<any>(null);
     const [stintForPayment, setStintForPayment] = useState<Stint | null>(null);
 
+    // Cancel dialog state
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [stintToCancel, setStintToCancel] = useState<Stint | null>(null);
+    const [cancelReason, setCancelReason] = useState("");
+    const [isCancelling, setIsCancelling] = useState(false);
+
     const fetchStints = async () => {
         setIsLoading(true);
         try {
@@ -115,6 +123,44 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
 
     const handleViewApplicants = (stint: Stint) => {
         setSelectedStint(stint);
+    };
+
+    const handleOpenCancelDialog = (stint: Stint) => {
+        setStintToCancel(stint);
+        setCancelReason("");
+        setCancelDialogOpen(true);
+    };
+
+    const handleCancelStint = async () => {
+        if (!stintToCancel) return;
+
+        setIsCancelling(true);
+        try {
+            await updateStint(stintToCancel.id, {
+                status: 'cancelled',
+                cancellationReason: cancelReason,
+                cancelledAt: new Date(),
+            });
+
+            toast({
+                title: "Stint Cancelled",
+                description: "The stint has been cancelled successfully.",
+            });
+
+            setCancelDialogOpen(false);
+            setStintToCancel(null);
+            setCancelReason("");
+            fetchStints(); // Refresh the list
+        } catch (error) {
+            console.error("Error cancelling stint:", error);
+            toast({
+                title: "Error",
+                description: "Failed to cancel stint. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsCancelling(false);
+        }
     };
 
     const handleApplicationAccepted = () => {
@@ -322,21 +368,13 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                         )}
                                                     </DropdownMenuItem>
                                                     {/* Only allow cancel if not strictly completed/expired/privacy mode */}
-                                                    {!privacyMessage && (
+                                                    {!privacyMessage && !['completed', 'in_progress', 'cancelled', 'expired'].includes(stint.status) && (
                                                         <DropdownMenuItem
                                                             className="text-destructive focus:text-destructive"
-                                                            disabled={['completed', 'in_progress', 'cancelled', 'expired'].includes(stint.status)}
-                                                            onClick={(e) => {
-                                                                if (['completed', 'in_progress', 'cancelled', 'expired'].includes(stint.status)) {
-                                                                    e.preventDefault();
-                                                                }
-                                                            }}
+                                                            onClick={() => handleOpenCancelDialog(stint)}
                                                         >
-                                                            {['completed', 'in_progress'].includes(stint.status) ? (
-                                                                <span className="opacity-50 cursor-not-allowed">Cannot Cancel (Active/Done)</span>
-                                                            ) : (
-                                                                "Cancel Stint"
-                                                            )}
+                                                            <XCircle className="mr-2 h-4 w-4" />
+                                                            Cancel Stint
                                                         </DropdownMenuItem>
                                                     )}
                                                 </DropdownMenuContent>
@@ -422,6 +460,61 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                 employerId={employerId}
                 employerEmail={user?.email || ''}
             />
+
+            {/* Cancel Stint Dialog */}
+            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <XCircle className="h-5 w-5 text-destructive" />
+                            Cancel Stint
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to cancel this stint? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {stintToCancel && (
+                            <div className="p-3 bg-muted rounded-lg text-sm">
+                                <p><span className="font-medium">Role:</span> {stintToCancel.role?.replace('-', ' ')}</p>
+                                <p><span className="font-medium">Date:</span> {stintToCancel.shiftDate ? new Date(stintToCancel.shiftDate.toDate ? stintToCancel.shiftDate.toDate() : stintToCancel.shiftDate).toLocaleDateString() : 'N/A'}</p>
+                                <p><span className="font-medium">Rate:</span> KES {stintToCancel.offeredRate?.toLocaleString()}</p>
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Reason for cancellation (optional)</label>
+                            <Textarea
+                                placeholder="Please provide a reason for cancelling this stint..."
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+                            Keep Stint
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancelStint}
+                            disabled={isCancelling}
+                        >
+                            {isCancelling ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Cancelling...
+                                </>
+                            ) : (
+                                <>
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Cancel Stint
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
