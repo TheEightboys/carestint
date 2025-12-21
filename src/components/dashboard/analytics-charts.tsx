@@ -3,7 +3,7 @@
 import {
     TrendingUp,
     TrendingDown,
-    DollarSign,
+    Banknote,
     Users,
     Calendar,
     Clock,
@@ -84,7 +84,7 @@ export function EarningsChart({ data, title = "Earnings Overview", description }
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-accent" />
+                    <Banknote className="h-5 w-5 text-accent" />
                     {title}
                 </CardTitle>
                 {description && <CardDescription>{description}</CardDescription>}

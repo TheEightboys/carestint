@@ -46,15 +46,17 @@ interface Earning {
     mpesaCost: number;
     netAmount: number;
     currency: string;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
+    status: 'pending' | 'processing' | 'completed' | 'paid' | 'failed';
     paidAt?: Date;
     transactionId?: string;
 }
 
 const getStatusBadge = (status: Earning['status']) => {
     switch (status) {
-        case 'completed':
+        case 'paid':
             return <Badge className="bg-green-500/10 text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Paid</Badge>;
+        case 'completed':
+            return <Badge className="bg-blue-500/10 text-blue-600"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
         case 'processing':
             return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Processing</Badge>;
         case 'pending':
@@ -71,7 +73,7 @@ interface EarningsHistoryProps {
 export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
     const [earnings, setEarnings] = useState<Earning[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'completed' | 'pending' | 'processing'>('all');
+    const [filter, setFilter] = useState<'all' | 'completed' | 'paid' | 'pending' | 'processing' | 'failed'>('all');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
     useEffect(() => {
@@ -106,11 +108,15 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                 const netAmount = grossAmount - platformFee;
 
                 // Determine payout status
-                let payoutStatus: 'pending' | 'processing' | 'completed' | 'failed' = 'pending';
-                if (stint.status === 'paid_out' || stint.payoutStatus === 'completed') {
+                let payoutStatus: 'pending' | 'processing' | 'completed' | 'paid' | 'failed' = 'pending';
+                if (stint.status === 'paid_out' || stint.payoutStatus === 'paid') {
+                    payoutStatus = 'paid';
+                } else if (stint.payoutStatus === 'completed' || stint.status === 'closed') {
                     payoutStatus = 'completed';
                 } else if (stint.payoutStatus === 'processing') {
                     payoutStatus = 'processing';
+                } else if (stint.status === 'completed') {
+                    payoutStatus = 'completed';
                 }
 
                 return {
@@ -189,10 +195,10 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
 
     // Total earned = all completed shifts (including pending payouts)
     const totalEarned = earnings.reduce((sum, e) => sum + e.netAmount, 0);
-    // Pending = not yet paid out
-    const pendingAmount = earnings.filter(e => e.status !== 'completed').reduce((sum, e) => sum + e.netAmount, 0);
+    // Pending = not yet paid out (includes pending, processing, and completed but not paid)
+    const pendingAmount = earnings.filter(e => e.status !== 'paid').reduce((sum, e) => sum + e.netAmount, 0);
     // Paid = already received
-    const paidAmount = earnings.filter(e => e.status === 'completed').reduce((sum, e) => sum + e.netAmount, 0);
+    const paidAmount = earnings.filter(e => e.status === 'paid').reduce((sum, e) => sum + e.netAmount, 0);
     // Total stints = all completed shifts
     const totalStints = earnings.length;
     const avgPerStint = totalStints > 0 ? totalEarned / totalStints : 0;
@@ -273,9 +279,11 @@ export function EarningsHistory({ professionalId }: EarningsHistoryProps) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="completed">Paid</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
                             <SelectItem value="processing">Processing</SelectItem>
                             <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
                         </SelectContent>
                     </Select>
 

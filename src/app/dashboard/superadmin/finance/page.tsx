@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, DollarSign, Receipt, TrendingUp, Wallet, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CreditCard, Banknote, Receipt, TrendingUp, Wallet, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,7 +96,7 @@ export default function FinancePage() {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                <Banknote className="h-4 w-4 text-muted-foreground" />
                                 Gross Volume
                             </CardTitle>
                         </CardHeader>
@@ -156,7 +156,7 @@ export default function FinancePage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-center py-8 text-muted-foreground">
-                            <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                            <Banknote className="h-12 w-12 mx-auto mb-4 opacity-30" />
                             <p className="font-medium">Payment Gateway Integration</p>
                             <p className="text-sm mt-2">
                                 This section will include real-time payment processing via M-Pesa and Flutterwave

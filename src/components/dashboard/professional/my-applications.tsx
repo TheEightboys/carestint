@@ -10,7 +10,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, MoreVertical, Loader2, RefreshCw, DollarSign, MapPin, FileText, Calendar, Building, X, Timer } from "lucide-react";
+import { Clock, CheckCircle, XCircle, MoreVertical, Loader2, RefreshCw, Banknote, MapPin, FileText, Calendar, Building, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -194,7 +194,7 @@ export function MyApplications({ professionalId = "demo-professional" }: MyAppli
                                                 </div>
                                                 {app.isBid && app.bidAmount && (
                                                     <div className="flex items-center gap-1 text-accent">
-                                                        <DollarSign className="h-3 w-3" />
+                                                        <Banknote className="h-3 w-3" />
                                                         <span>Bid: KES {app.bidAmount.toLocaleString()}</span>
                                                     </div>
                                                 )}

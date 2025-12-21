@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Clock, MoreVertical, Users, MapPin, DollarSign, Loader2, RefreshCw, UserCheck, LogIn, LogOut, Timer, CheckCircle2 } from "lucide-react";
+import { Briefcase, Clock, MoreVertical, Users, MapPin, Banknote, Loader2, RefreshCw, UserCheck, LogIn, LogOut, Timer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -197,7 +197,7 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                     <span>{stint.city}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <DollarSign className="h-3 w-3" />
+                                                    <Banknote className="h-3 w-3" />
                                                     <span>{stint.currency || 'KES'} {stint.offeredRate?.toLocaleString()}</span>
                                                 </div>
                                             </div>
@@ -265,8 +265,20 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                         </Badge>
                                                     )}
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">
-                                                    Cancel Stint
+                                                <DropdownMenuItem
+                                                    className="text-destructive focus:text-destructive"
+                                                    disabled={['completed', 'in_progress', 'cancelled', 'expired'].includes(stint.status)}
+                                                    onClick={(e) => {
+                                                        if (['completed', 'in_progress', 'cancelled', 'expired'].includes(stint.status)) {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
+                                                >
+                                                    {['completed', 'in_progress'].includes(stint.status) ? (
+                                                        <span className="opacity-50 cursor-not-allowed">Cannot Cancel (Active/Done)</span>
+                                                    ) : (
+                                                        "Cancel Stint"
+                                                    )}
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

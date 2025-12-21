@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
-    ArrowLeft, Briefcase, Clock, DollarSign, Filter, MapPin, Search, User, Loader2,
+    ArrowLeft, Briefcase, Clock, Banknote, Filter, MapPin, Search, User, Loader2,
     ChevronDown, ChevronUp, Eye, AlertTriangle, CheckCircle2, XCircle, Calendar,
     Building, FileText, CreditCard, RefreshCw, Flag, MessageSquare, ArrowUp,
     Ban, UserX, Gavel, StickyNote, RotateCcw, Star
@@ -682,7 +682,7 @@ export default function StintsPage() {
                                         </TableHead>
                                         <TableHead>
                                             <div className="flex items-center gap-1">
-                                                <DollarSign className="h-3 w-3" />
+                                                <Banknote className="h-3 w-3" />
                                                 Rate
                                             </div>
                                         </TableHead>

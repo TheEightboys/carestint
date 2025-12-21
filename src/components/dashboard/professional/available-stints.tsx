@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Search, MapPin, Clock, Briefcase, FileText, Loader2,
-  RefreshCw, DollarSign, AlertCircle, CheckCircle, Filter,
+  RefreshCw, Banknote, AlertCircle, CheckCircle, Filter,
   SlidersHorizontal, X, Eye, Navigation, MapPinOff
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +61,65 @@ interface AvailableStintsProps {
   professionalId?: string;
   professionalName?: string;
   professionalRole?: string;
+  professionalIssuingBody?: string;  // e.g., "KMPDC / Kenya" - used to filter by license country
+  professionalPreferredLocation?: string;  // Default city filter
 }
+
+// Country-to-cities mapping for license-based filtering
+const COUNTRY_CITIES: Record<string, string[]> = {
+  'Kenya': [
+    'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Nakuru', 'Thika',
+    'Malindi', 'Nyeri', 'Machakos', 'Kisii', 'Kitale', 'Naivasha',
+    'Nanyuki', 'Garissa', 'Kakamega', 'Meru', 'Kericho', 'Embu',
+    'Migori', 'Bungoma', 'Kiambu', 'Ruiru', 'Homa Bay', 'Siaya',
+    'Voi', 'Busia', 'Mumias', 'Kabarnet', 'Marsabit', 'Isiolo',
+    'Kajiado', 'Kilifi', 'Lamu', 'Mandera', 'Wajir', 'Lodwar',
+    'Rusinga', 'Narok', 'Nyamira', 'Vihiga', 'Chuka', 'Maua'
+  ],
+  'Uganda': ['Kampala', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Fort Portal', 'Mbale', 'Lira'],
+  'Tanzania': ['Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma', 'Zanzibar', 'Moshi', 'Tanga'],
+  'Rwanda': ['Kigali', 'Butare', 'Gisenyi', 'Ruhengeri'],
+};
+
+// Helper to extract country from issuingBody (e.g., "KMPDC / Kenya" -> "Kenya")
+const extractCountryFromIssuingBody = (issuingBody?: string): string | null => {
+  if (!issuingBody) return null;
+
+  // Try patterns like "KMPDC / Kenya" or "KMPDC-Kenya" or "KMPDC (Kenya)"
+  const patterns = [
+    /\/\s*(\w+)\s*$/i,           // "KMPDC / Kenya" -> Kenya
+    /-\s*(\w+)\s*$/i,            // "KMPDC-Kenya" -> Kenya
+    /\((\w+)\)\s*$/i,            // "KMPDC (Kenya)" -> Kenya
+  ];
+
+  for (const pattern of patterns) {
+    const match = issuingBody.match(pattern);
+    if (match) {
+      const country = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+      if (COUNTRY_CITIES[country]) return country;
+    }
+  }
+
+  // Check if the string contains a known country name
+  const normalized = issuingBody.trim().toLowerCase();
+  for (const country of Object.keys(COUNTRY_CITIES)) {
+    if (normalized.includes(country.toLowerCase())) {
+      return country;
+    }
+  }
+
+  return null;
+};
+
+// Get allowed cities based on license country
+const getAllowedCities = (licenseCountry: string | null): string[] => {
+  if (!licenseCountry) {
+    // If no license country detected, show all cities (fallback)
+    return CITIES;
+  }
+  const countryCities = COUNTRY_CITIES[licenseCountry] || [];
+  return ['All Cities', ...countryCities, 'Other'];
+};
 
 interface Filters {
   minRate: number;
@@ -82,48 +140,23 @@ const PROFESSIONS = [
   { value: 'radiographer', label: 'Radiographer' },
 ];
 
-// Comprehensive list of East African cities and towns
+// Full list of East African cities (used as fallback when no license country)
 const CITIES = [
   'All Cities',
-  // Kenya - Major Cities
-  'Nairobi',
-  'Mombasa',
-  'Kisumu',
-  'Eldoret',
-  'Nakuru',
-  'Thika',
-  // Kenya - Other Towns
-  'Malindi',
-  'Nyeri',
-  'Machakos',
-  'Kisii',
-  'Kitale',
-  'Naivasha',
-  'Nanyuki',
-  'Garissa',
-  'Kakamega',
-  'Meru',
-  'Kericho',
-  'Embu',
-  'Migori',
-  'Bungoma',
-  'Kiambu',
-  'Ruiru',
+  // Kenya
+  'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Nakuru', 'Thika',
+  'Malindi', 'Nyeri', 'Machakos', 'Kisii', 'Kitale', 'Naivasha',
+  'Nanyuki', 'Garissa', 'Kakamega', 'Meru', 'Kericho', 'Embu',
+  'Migori', 'Bungoma', 'Kiambu', 'Ruiru', 'Homa Bay', 'Siaya',
+  'Voi', 'Busia', 'Mumias', 'Kabarnet', 'Marsabit', 'Isiolo',
+  'Kajiado', 'Kilifi', 'Lamu', 'Mandera', 'Wajir', 'Lodwar',
+  'Rusinga', 'Narok', 'Nyamira', 'Vihiga', 'Chuka', 'Maua',
   // Uganda
-  'Kampala',
-  'Entebbe',
-  'Jinja',
-  'Mbarara',
-  'Gulu',
+  'Kampala', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Fort Portal', 'Mbale', 'Lira',
   // Tanzania
-  'Dar es Salaam',
-  'Arusha',
-  'Mwanza',
-  'Dodoma',
-  'Zanzibar',
+  'Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma', 'Zanzibar', 'Moshi', 'Tanga',
   // Rwanda
-  'Kigali',
-  'Butare',
+  'Kigali', 'Butare', 'Gisenyi', 'Ruhengeri',
   // Other
   'Other',
 ];
@@ -138,7 +171,9 @@ const DISTANCE_OPTIONS = [
 export function AvailableStints({
   professionalId = "demo-professional",
   professionalName = "Demo User",
-  professionalRole = "rn"
+  professionalRole = "rn",
+  professionalIssuingBody,
+  professionalPreferredLocation
 }: AvailableStintsProps) {
   const { toast } = useToast();
   const [stints, setStints] = useState<any[]>([]);
@@ -152,12 +187,31 @@ export function AvailableStints({
   const [detailsOpen, setDetailsOpen] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Filters
+  // License country derived from issuingBody
+  const licenseCountry = extractCountryFromIssuingBody(professionalIssuingBody);
+  const allowedCities = getAllowedCities(licenseCountry);
+
+  // Get default city from preferred location
+  const getDefaultCity = (): string => {
+    if (professionalPreferredLocation) {
+      const preferredLower = professionalPreferredLocation.toLowerCase().trim();
+      const matchedCity = allowedCities.find(city =>
+        city.toLowerCase() === preferredLower ||
+        preferredLower.includes(city.toLowerCase())
+      );
+      if (matchedCity && matchedCity !== 'All Cities' && matchedCity !== 'Other') {
+        return matchedCity;
+      }
+    }
+    return 'All Cities';
+  };
+
+  // Filters - default city comes from preferred location
   const [filters, setFilters] = useState<Filters>({
     minRate: 0,
     shiftType: 'all',
     profession: 'all',
-    city: 'All Cities',
+    city: getDefaultCity(),
     distance: 'any',
   });
   const [activeFilterCount, setActiveFilterCount] = useState(0);
@@ -175,7 +229,7 @@ export function AvailableStints({
 
       // CRITICAL: Role-based filtering - only show stints matching professional's verified role
       // This is mandatory for a credentialed, role-restricted marketplace
-      const roleFilteredStints = openStints.filter((stint: any) => {
+      let filteredStints = openStints.filter((stint: any) => {
         if (!professionalRole) return false; // If no role, show nothing
 
         // Case-insensitive comparison with hyphen/space normalization
@@ -185,13 +239,25 @@ export function AvailableStints({
         return stintRole === profRole;
       });
 
-      console.log('🔒 Role Filter:', {
+      // COUNTRY-BASED FILTERING: Only show stints in cities within licensed country
+      // A Kenya-licensed professional should ONLY see stints in Kenyan cities
+      if (licenseCountry) {
+        const countryCities = COUNTRY_CITIES[licenseCountry] || [];
+        filteredStints = filteredStints.filter((stint: any) => {
+          const stintCity = (stint.city || '').toLowerCase().trim();
+          return countryCities.some(city => city.toLowerCase() === stintCity);
+        });
+      }
+
+      console.log('🔒 Filters Applied:', {
         professionalRole,
+        licenseCountry,
+        preferredLocation: professionalPreferredLocation,
         totalOpenStints: openStints.length,
-        filteredCount: roleFilteredStints.length
+        afterFiltering: filteredStints.length
       });
 
-      setStints(roleFilteredStints);
+      setStints(filteredStints);
 
       if (professionalId && professionalId !== 'demo-professional') {
         const applications = await getApplicationsByProfessional(professionalId);
@@ -483,7 +549,7 @@ export function AvailableStints({
                   )}
                 </Button>
               </SheetTrigger>
-              <SheetContent>
+              <SheetContent className="w-full sm:max-w-md flex flex-col h-full">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
                     <Filter className="h-5 w-5" />
@@ -494,7 +560,7 @@ export function AvailableStints({
                   </SheetDescription>
                 </SheetHeader>
 
-                <div className="py-6 space-y-6">
+                <div className="flex-1 overflow-y-auto py-6 space-y-6 pr-2">
                   {/* Min Rate Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
@@ -551,6 +617,11 @@ export function AvailableStints({
                   {/* City Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">City / Town</Label>
+                    {licenseCountry && (
+                      <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                        🔐 Showing cities in <strong>{licenseCountry}</strong> (based on your license)
+                      </p>
+                    )}
                     <Select
                       value={filters.city}
                       onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
@@ -559,7 +630,7 @@ export function AvailableStints({
                         <SelectValue placeholder="Select city" />
                       </SelectTrigger>
                       <SelectContent>
-                        {CITIES.map(city => (
+                        {allowedCities.map(city => (
                           <SelectItem key={city} value={city}>
                             {city}
                           </SelectItem>
@@ -706,7 +777,7 @@ export function AvailableStints({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <Banknote className="h-4 w-4 text-green-600" />
                     <span className="text-lg font-semibold text-accent">
                       KES {stint.offeredRate?.toLocaleString() || 0}
                     </span>

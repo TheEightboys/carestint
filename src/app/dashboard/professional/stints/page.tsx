@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
-    ArrowLeft, Briefcase, Clock, DollarSign, MapPin, Loader2,
+    ArrowLeft, Briefcase, Clock, Banknote, MapPin, Loader2,
     Calendar, CheckCircle2, XCircle, Play, AlertTriangle, Search,
     Eye, Star, Download, MessageSquare, Building, Wallet, Send,
     Info, FileText, LogIn, LogOut, Bookmark, AlertCircle, Upload
@@ -516,7 +516,7 @@ Thank you for working with CareStint!
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20">
-                                    <DollarSign className="h-5 w-5 text-green-600" />
+                                    <Banknote className="h-5 w-5 text-green-600" />
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">This Month</p>

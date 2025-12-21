@@ -15,7 +15,7 @@ import {
     Play,
     Square,
     MapPin,
-    DollarSign,
+    Banknote,
     Building,
     Loader2,
     CheckCircle2,
@@ -289,7 +289,7 @@ export function ActiveStint({ professionalId = "demo-professional" }: ActiveStin
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-green-600" />
+                                <Banknote className="h-4 w-4 text-green-600" />
                                 <span className="font-semibold text-green-600">
                                     KES {activeStint.offeredRate?.toLocaleString()}
                                 </span>

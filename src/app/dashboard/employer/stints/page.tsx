@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
-    ArrowLeft, Briefcase, Clock, DollarSign, MapPin, User, Loader2,
+    ArrowLeft, Briefcase, Clock, Banknote, MapPin, User, Loader2,
     Calendar, CheckCircle2, XCircle, Play, AlertTriangle, Plus,
     Eye, Edit, Users, Star, Download, RefreshCw, MessageSquare,
     Info, HelpCircle, FileText, CreditCard, Building, Wallet
@@ -459,7 +459,7 @@ Thank you for using CareStint!
                                                             {stint.city}
                                                         </span>
                                                         <span className="flex items-center gap-1 font-medium text-foreground">
-                                                            <DollarSign className="h-3.5 w-3.5" />
+                                                            <Banknote className="h-3.5 w-3.5" />
                                                             KES {stint.offeredRate?.toLocaleString()}
                                                         </span>
                                                     </div>

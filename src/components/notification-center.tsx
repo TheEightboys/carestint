@@ -7,7 +7,7 @@ import {
     Check,
     X,
     Calendar,
-    DollarSign,
+    Banknote,
     AlertCircle,
     CheckCircle,
     Clock,

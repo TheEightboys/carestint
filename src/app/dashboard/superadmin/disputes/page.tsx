@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle, Clock, MessageSquare, DollarSign, CheckCircle2, XCircle, User, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Clock, MessageSquare, Banknote, CheckCircle2, XCircle, User, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -137,7 +137,7 @@ export default function DisputesPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-blue-500" />
+                <Banknote className="h-4 w-4 text-blue-500" />
                 Frozen Funds
               </CardTitle>
             </CardHeader>
@@ -212,7 +212,7 @@ export default function DisputesPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>
                     <div className="flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" />
+                      <Banknote className="h-3 w-3" />
                       Funds
                     </div>
                   </TableHead>

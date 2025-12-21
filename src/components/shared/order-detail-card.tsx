@@ -24,7 +24,7 @@ import {
     Calendar,
     ChevronDown,
     ChevronUp,
-    DollarSign,
+    Banknote,
     CheckCircle2,
     XCircle,
     AlertCircle,

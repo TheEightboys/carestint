@@ -44,6 +44,7 @@ interface ProfessionalData {
     averageRating?: number;
     completedStints?: number;
     status: string;
+    issuingBody?: string;
 }
 
 export default function ProfessionalDashboardPage() {
@@ -323,6 +324,8 @@ export default function ProfessionalDashboardPage() {
                             professionalId={professionalId}
                             professionalName={professionalName}
                             professionalRole={professionalRole}
+                            professionalIssuingBody={professional.issuingBody}
+                            professionalPreferredLocation={professional.locations}
                         />
                     </TabsContent>
                     <TabsContent value="applications" className="space-y-4">

@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react';
 import {
     CreditCard,
-    DollarSign,
+    Banknote,
     RefreshCw,
     Search,
     Filter,
@@ -269,7 +269,7 @@ export default function PaymentsDashboardPage() {
                         {isProcessingPayouts ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                            <DollarSign className="h-4 w-4 mr-2" />
+                            <Banknote className="h-4 w-4 mr-2" />
                         )}
                         Run Payout Job
                     </Button>

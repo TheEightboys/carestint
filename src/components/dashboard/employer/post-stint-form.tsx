@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, PlusCircle, Info, Loader2, AlertTriangle, Tag, Check, X } from "lucide-react";
+import { CalendarIcon, PlusCircle, Info, Loader2, AlertTriangle, Tag, Check, X, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -96,6 +96,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moderationWarnings, setModerationWarnings] = useState<string[]>([]);
+  const [timeValidationError, setTimeValidationError] = useState<string | null>(null);
 
   // Promo code state
   const [promoCode, setPromoCode] = useState('');
@@ -227,6 +228,19 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   };
 
   const onSubmit: SubmitHandler<FormData> = async (data) => {
+    // Validate time before submission
+    const hours = calculateHoursDuration(data.startTime, data.endTime);
+    const timeValidation = validateTimeForShiftType(data.shiftType, hours);
+
+    if (!timeValidation.valid) {
+      toast({
+        title: "Invalid Time Range",
+        description: timeValidation.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setModerationWarnings([]);
 
@@ -418,7 +432,72 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
 
   const watchedRate = form.watch('rate');
   const watchedDates = form.watch('shiftDates') || [];
+  const watchedStartTime = form.watch('startTime');
+  const watchedEndTime = form.watch('endTime');
+  const watchedShiftType = form.watch('shiftType');
   const feeCalc = calculatedFees(watchedRate, watchedDates);
+
+  // Calculate hours between start and end time
+  const calculateHoursDuration = (startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 0;
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+
+    let startMinutes = startHour * 60 + startMin;
+    let endMinutes = endHour * 60 + endMin;
+
+    // Handle overnight shifts
+    if (endMinutes <= startMinutes) {
+      endMinutes += 24 * 60;
+    }
+
+    return (endMinutes - startMinutes) / 60;
+  };
+
+  // Validate time against shift type
+  const validateTimeForShiftType = (shiftType: string, hours: number): { valid: boolean; message: string | null } => {
+    if (!shiftType) return { valid: true, message: null };
+
+    if (shiftType === 'Half-day') {
+      if (hours > 6) {
+        return {
+          valid: false,
+          message: `Half-day shift should be 4-6 hours. You selected ${hours.toFixed(1)} hours. Please reduce the time range or select Full-day shift type.`
+        };
+      }
+      if (hours < 4) {
+        return {
+          valid: false,
+          message: `Half-day shift should be at least 4 hours. You selected ${hours.toFixed(1)} hours. Please increase the time range.`
+        };
+      }
+    } else if (shiftType === 'Full-day') {
+      if (hours < 8) {
+        return {
+          valid: false,
+          message: `Full-day shift should be 8-12 hours. You selected ${hours.toFixed(1)} hours. Please increase the time range or select Half-day shift type.`
+        };
+      }
+      if (hours > 12) {
+        return {
+          valid: false,
+          message: `Full-day shift should not exceed 12 hours. You selected ${hours.toFixed(1)} hours. Please reduce the time range.`
+        };
+      }
+    }
+
+    return { valid: true, message: null };
+  };
+
+  // Watch for time and shift type changes to validate
+  useEffect(() => {
+    const hours = calculateHoursDuration(watchedStartTime, watchedEndTime);
+    const validation = validateTimeForShiftType(watchedShiftType, hours);
+    setTimeValidationError(validation.message);
+  }, [watchedStartTime, watchedEndTime, watchedShiftType]);
+
+  // Calculate display hours for current selection
+  const currentHours = calculateHoursDuration(watchedStartTime, watchedEndTime);
 
 
   return (
@@ -692,6 +771,28 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 }}
               />
             </div>
+
+            {/* Time Duration Display & Validation Alert */}
+            {watchedShiftType && watchedStartTime && watchedEndTime && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Shift duration: <strong className="text-foreground">{currentHours.toFixed(1)} hours</strong>
+                    {watchedShiftType === 'Half-day' && ' (expected: 4-6 hours)'}
+                    {watchedShiftType === 'Full-day' && ' (expected: 8-12 hours)'}
+                  </span>
+                </div>
+                {timeValidationError && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      {timeValidationError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
 
             {/* City/Town Field */}
             <FormField

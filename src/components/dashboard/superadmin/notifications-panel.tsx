@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Bell, X, Check, AlertTriangle, Clock, UserCheck, Briefcase, DollarSign } from 'lucide-react';
+import { Bell, X, Check, AlertTriangle, Clock, UserCheck, Briefcase, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -94,7 +94,7 @@ const getNotificationIcon = (type: Notification['type']) => {
         case 'dispute':
             return AlertTriangle;
         case 'payout':
-            return DollarSign;
+            return Banknote;
         case 'new_registration':
             return Briefcase;
         default:

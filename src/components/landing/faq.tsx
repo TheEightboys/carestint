@@ -10,13 +10,13 @@ import {
 } from '@/components/ui/accordion';
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { HelpCircle, DollarSign, Shield, CreditCard, Calendar, MapPin, AlertCircle } from 'lucide-react';
+import { HelpCircle, Banknote, Shield, CreditCard, Calendar, MapPin, AlertCircle } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const faqs = [
   {
-    icon: <DollarSign className="h-5 w-5 text-accent" />,
+    icon: <Banknote className="h-5 w-5 text-accent" />,
     question: "How do the 15%, 20% and 5% fees work?",
     answer: `Employers/Facilities only pay a booking fee once a professional accepts a stint.
 
