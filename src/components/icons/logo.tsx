@@ -13,7 +13,8 @@ export function Logo({ className, width = 160, height = 40 }: LogoProps) {
       alt="CareStint"
       width={width}
       height={height}
-      className={className}
+      className={`brightness-0 invert ${className || ''}`}
+      style={{ filter: 'brightness(0) invert(1)' }}
       priority
     />
   );
