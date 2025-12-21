@@ -1,25 +1,20 @@
-import type { SVGProps } from 'react';
+import Image from 'next/image';
 
-export function Logo(props: SVGProps<SVGSVGElement>) {
+interface LogoProps {
+  className?: string;
+  width?: number;
+  height?: number;
+}
+
+export function Logo({ className, width = 160, height = 40 }: LogoProps) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 160 25"
-      width="160"
-      height="25"
-      {...props}
-    >
-      <text
-        x="0"
-        y="20"
-        fontFamily="'Space Grotesk', sans-serif"
-        fontSize="24"
-        fontWeight="bold"
-        fill="currentColor"
-        className="text-foreground"
-      >
-        CareStint
-      </text>
-    </svg>
+    <Image
+      src="/logo.png"
+      alt="CareStint"
+      width={width}
+      height={height}
+      className={className}
+      priority
+    />
   );
 }
