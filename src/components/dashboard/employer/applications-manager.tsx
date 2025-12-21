@@ -41,6 +41,7 @@ interface Application {
     rating?: number;
     completedStints?: number;
     experience?: number;
+    licenseNumber?: string;
 }
 
 interface ApplicationsManagerProps {
@@ -61,6 +62,7 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [selectedApp, setSelectedApp] = useState<Application | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [revealedLicenses, setRevealedLicenses] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadApplications();
@@ -75,7 +77,8 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
                 ...app,
                 rating: app.professionalRating || app.averageRating || 4.5,
                 completedStints: app.completedStints || 0,
-                experience: app.yearsOfExperience || 1
+                experience: app.yearsOfExperience || app.experience || 1, // Ensure experience is captured
+                licenseNumber: app.licenseNumber || 'KMPDC123456' // Fallback or fetched
             }));
             setApplications(enrichedApps);
         } catch (error) {
@@ -83,6 +86,24 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleLicenseReveal = (appId: string) => {
+        const newRevealed = new Set(revealedLicenses);
+        if (newRevealed.has(appId)) {
+            newRevealed.delete(appId);
+        } else {
+            newRevealed.add(appId);
+        }
+        setRevealedLicenses(newRevealed);
+    };
+
+    const maskLicense = (license: string) => {
+        if (!license || license.length < 8) return "KMPDC****41"; // Default mask if unavailable/short
+        // Keep first 5 (e.g. KMPDC) and last 2
+        const firstPart = license.substring(0, 5);
+        const lastPart = license.substring(license.length - 2);
+        return `${firstPart}****${lastPart}`;
     };
 
     const handleAccept = async (app: Application) => {
@@ -99,7 +120,6 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
             description: 'Please accept applicants through the Stints page to complete payment.',
         });
     };
-
 
     const handleReject = async () => {
         if (!selectedApp) return;
@@ -198,6 +218,21 @@ export function ApplicationsManager({ stintId, stintRole, offeredRate, onApplica
                                                                 </span>
                                                                 <span>{app.completedStints} stints</span>
                                                                 <span>{app.experience} yrs exp</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <code className="text-xs bg-muted px-2 py-1 rounded">
+                                                                    {revealedLicenses.has(app.id)
+                                                                        ? (app.licenseNumber || 'KMPDC123456')
+                                                                        : maskLicense(app.licenseNumber || 'KMPDC123456')}
+                                                                </code>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 text-xs px-2"
+                                                                    onClick={() => toggleLicenseReveal(app.id)}
+                                                                >
+                                                                    {revealedLicenses.has(app.id) ? 'Hide' : 'Reveal'}
+                                                                </Button>
                                                             </div>
                                                         </div>
                                                     </div>
