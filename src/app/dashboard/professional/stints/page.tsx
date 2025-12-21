@@ -98,7 +98,8 @@ export default function ProfessionalStintsPage() {
         if (professionalId) {
             loadData();
         }
-    }, [professionalId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [professionalId, userProfile?.primaryRole]);
 
     const loadData = async () => {
         if (!professionalId) return;
@@ -111,7 +112,26 @@ export default function ProfessionalStintsPage() {
             ]);
 
             setStints(myStints);
-            setAvailableStints(openStints);
+
+            // ROLE ENFORCEMENT: Filter stints to only show those matching professional's verified role
+            const professionalRole = userProfile?.primaryRole;
+            console.log('🔒 Role Filter Debug:', {
+                professionalRole,
+                totalOpenStints: openStints.length,
+                openStintRoles: openStints.map((s: any) => s.role)
+            });
+
+            const roleFilteredStints = professionalRole
+                ? openStints.filter((s: any) => {
+                    // Case-insensitive comparison and handle hyphenated roles
+                    const stintRole = (s.role || '').toLowerCase().replace(/\s+/g, '-');
+                    const profRole = professionalRole.toLowerCase().replace(/\s+/g, '-');
+                    return stintRole === profRole;
+                })
+                : []; // Show none if no role defined - forces profile completion
+
+            console.log('🔒 Filtered to:', roleFilteredStints.length, 'stints');
+            setAvailableStints(roleFilteredStints);
             setApplications(myApps);
 
             // Calculate earnings from completed stints
@@ -401,23 +421,27 @@ Thank you for working with CareStint!
     };
 
     const submitApplication = async () => {
-        if (!selectedStint || !professionalId || !professionalData) return;
+        if (!selectedStint || !professionalId || !userProfile) return;
 
         setIsSubmitting(true);
         try {
             await addStintApplication({
                 stintId: selectedStint.id,
                 professionalId,
-                professionalName: professionalData?.fullName || 'Professional',
-                professionalRole: (professionalData?.primaryRole || 'other') as any,
+                professionalName: userProfile?.fullName || 'Professional',
+                professionalRole: (userProfile?.primaryRole || 'other') as any,
                 isBid: false,
                 message: applicationMessage
             });
 
             await loadData();
             setApplyDialogOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error applying:", error);
+            // Show user-friendly error for role mismatch
+            if (error?.message?.includes('ROLE_MISMATCH')) {
+                alert('This stint requires a different professional role. You can only apply to stints matching your verified profession.');
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -543,6 +567,19 @@ Thank you for working with CareStint!
                                 <CardDescription>
                                     {PROFESSIONAL_TABS.find(t => t.id === activeTab)?.description}
                                 </CardDescription>
+
+                                {/* Role Indicator for Available Stints Tab */}
+                                {activeTab === 'available' && userProfile?.primaryRole && (
+                                    <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-lg flex items-center gap-2">
+                                        <Briefcase className="h-4 w-4 text-accent" />
+                                        <span className="text-sm">
+                                            <strong>Role:</strong>{' '}
+                                            <span className="capitalize">{userProfile.primaryRole.replace('-', ' ')}</span>
+                                            {' '}
+                                            <span className="text-muted-foreground">(based on your verified profile)</span>
+                                        </span>
+                                    </div>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 {getDisplayStints.length === 0 ? (

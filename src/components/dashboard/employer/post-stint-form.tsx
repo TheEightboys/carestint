@@ -42,8 +42,24 @@ import { useToast } from "@/hooks/use-toast";
 import { addStint, getEmployerById } from "@/lib/firebase/firestore";
 import { moderateStintPosting, calculateSettlement } from "@/lib/automation-service";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { ProfessionalRole, ShiftType, UrgencyType } from "@/lib/types";
-import { getActivePromotions, canEmployerUsePromotion, type Promotion } from "@/lib/firebase/promotions";
+import type { ProfessionalRole, ShiftType, UrgencyType, FacilityLocation } from "@/lib/types";
+import { getActivePromotions, canEmployerUsePromotion, recordPromotionUsage, type Promotion } from "@/lib/firebase/promotions";
+import { Timestamp } from "firebase/firestore";
+
+// Time options for the enhanced time picker
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const hour = i.toString().padStart(2, '0');
+  const hour12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+  const period = i < 12 ? 'AM' : 'PM';
+  return { value: hour, label: `${hour12}:00 ${period}` };
+});
+
+const MINUTE_OPTIONS = [
+  { value: '00', label: '00' },
+  { value: '15', label: '15' },
+  { value: '30', label: '30' },
+  { value: '45', label: '45' },
+];
 
 const ROLE_MAP: Record<string, ProfessionalRole> = {
   "Registered Nurse (RN)": "rn",
@@ -93,26 +109,9 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
   // Employer signup date for promo validation
   const [employerSignupDate, setEmployerSignupDate] = useState<Date>(new Date());
 
-  // Fetch employer data on mount to get actual signup date
-  useEffect(() => {
-    const fetchEmployerData = async () => {
-      if (employerId && employerId !== 'demo-employer') {
-        try {
-          const employer = await getEmployerById(employerId);
-          if (employer?.createdAt) {
-            // Handle Firestore Timestamp or Date
-            const signupDate = employer.createdAt.toDate
-              ? employer.createdAt.toDate()
-              : new Date(employer.createdAt);
-            setEmployerSignupDate(signupDate);
-          }
-        } catch (error) {
-          console.error('Error fetching employer data:', error);
-        }
-      }
-    };
-    fetchEmployerData();
-  }, [employerId]);
+  // Employer location state for location selection
+  const [employerLocations, setEmployerLocations] = useState<FacilityLocation[]>([]);
+  const [facilityType, setFacilityType] = useState<'single-site' | 'multi-site'>('single-site');
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -127,6 +126,50 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
       allowBids: false,
     },
   });
+
+  // Fetch employer data on mount to get actual signup date and locations
+  useEffect(() => {
+    const fetchEmployerData = async () => {
+      if (employerId && employerId !== 'demo-employer') {
+        try {
+          const employer = await getEmployerById(employerId);
+          if (employer?.createdAt) {
+            // Handle Firestore Timestamp or Date
+            const signupDate = (employer.createdAt as any).toDate
+              ? (employer.createdAt as any).toDate()
+              : new Date(employer.createdAt as any);
+            setEmployerSignupDate(signupDate);
+          }
+          // Set employer locations for location selection
+          if (employer?.locations && employer.locations.length > 0) {
+            setEmployerLocations(employer.locations);
+            setFacilityType(employer.facilityType || 'single-site');
+            // For single-site, auto-set the city to the first (only) location
+            if (employer.facilityType === 'single-site') {
+              form.setValue('city', employer.locations[0].town);
+            }
+          } else if (employer?.city) {
+            // Fallback for legacy data without locations array
+            setEmployerLocations([{
+              id: 'legacy',
+              name: 'Main Location',
+              streetArea: '',
+              town: employer.city,
+              country: employer.country || 'Kenya',
+              isMainLocation: true,
+              createdAt: new Date()
+            }]);
+            setFacilityType('single-site');
+            form.setValue('city', employer.city);
+          }
+        } catch (error) {
+          console.error('Error fetching employer data:', error);
+        }
+      }
+    };
+    fetchEmployerData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employerId]);
 
   // Handle promo code validation
   const handleApplyPromoCode = async () => {
@@ -264,9 +307,26 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
         createdStintIds.push(stintId);
       }
 
+      // Record promo usage to prevent reuse
+      if (appliedPromo && appliedPromo.id && createdStintIds.length > 0) {
+        try {
+          console.log('Recording promo usage:', { promotionId: appliedPromo.id, employerId, stintId: createdStintIds[0] });
+          await recordPromotionUsage({
+            promotionId: appliedPromo.id,
+            employerId: employerId,
+            stintId: createdStintIds[0], // Record usage for the first stint
+            usedAt: Timestamp.now(),
+            creditApplied: appliedPromo.creditAmount,
+          });
+          console.log('Promo usage recorded successfully');
+        } catch (promoError) {
+          console.error('Error recording promo usage:', promoError);
+          // Don't fail the stint creation if promo recording fails
+        }
+      }
+
       // Show success toast
       if (dates.length > 1) {
-        const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
         toast({
           title: `${dates.length} Stints Posted!`,
           description: `Coverage for ${dates.length} selected dates has been created.`,
@@ -278,6 +338,9 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
         });
       }
 
+      // Clear promo after successful use
+      setAppliedPromo(null);
+      setPromoCode('');
       form.reset();
       setModerationWarnings([]);
     } catch (error) {
@@ -292,22 +355,70 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
     }
   };
 
-  const calculatedFees = (rate: number) => {
-    const settlement = calculateSettlement(rate, false);
-    const urgentSettlement = calculateSettlement(rate, true);
+  // Calculate fees for multi-day shifts with proper 15%/20% split
+  const calculatedFees = (rate: number, dates: Date[] = []) => {
     const promoDiscount = appliedPromo?.creditAmount || 0;
+    const now = Date.now();
+    const HOURS_24 = 24 * 60 * 60 * 1000;
+
+    // If no dates selected yet, show single-day estimates
+    if (!dates || dates.length === 0) {
+      const normalFeePerDay = Math.round(rate * 0.15);
+      const urgentFeePerDay = Math.round(rate * 0.20);
+      return {
+        normalDays: 0,
+        urgentDays: 0,
+        normalFeePerDay,
+        urgentFeePerDay,
+        normalFeeTotal: 0,
+        urgentFeeTotal: 0,
+        totalDailyRate: 0,
+        totalFee: 0,
+        totalCost: 0,
+        promoDiscount,
+        finalTotalCost: 0,
+      };
+    }
+
+    // Calculate how many days are urgent vs normal
+    let normalDays = 0;
+    let urgentDays = 0;
+    dates.forEach(date => {
+      const hoursUntil = date.getTime() - now;
+      if (hoursUntil < HOURS_24) {
+        urgentDays++;
+      } else {
+        normalDays++;
+      }
+    });
+
+    const normalFeePerDay = Math.round(rate * 0.15);
+    const urgentFeePerDay = Math.round(rate * 0.20);
+    const normalFeeTotal = normalDays * normalFeePerDay;
+    const urgentFeeTotal = urgentDays * urgentFeePerDay;
+    const totalFee = normalFeeTotal + urgentFeeTotal;
+    const totalDailyRate = dates.length * rate;
+    const totalCost = totalDailyRate + totalFee;
+    const finalTotalCost = Math.max(0, totalCost - promoDiscount);
+
     return {
-      normalFee: settlement.bookingFee,
-      urgentFee: urgentSettlement.bookingFee,
-      clinicPays: settlement.clinicCharge,
-      proReceives: settlement.professionalNet,
+      normalDays,
+      urgentDays,
+      normalFeePerDay,
+      urgentFeePerDay,
+      normalFeeTotal,
+      urgentFeeTotal,
+      totalDailyRate,
+      totalFee,
+      totalCost,
       promoDiscount,
-      finalFee: Math.max(0, settlement.bookingFee - promoDiscount),
+      finalTotalCost,
     };
   };
 
   const watchedRate = form.watch('rate');
-  const { urgentFee, normalFee, clinicPays, proReceives, promoDiscount, finalFee } = calculatedFees(watchedRate);
+  const watchedDates = form.watch('shiftDates') || [];
+  const feeCalc = calculatedFees(watchedRate, watchedDates);
 
 
   return (
@@ -480,96 +591,157 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
               )}
             />
 
-            {/* Time and City Fields */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Time Selection - Enhanced UI */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const [hour, minute] = (field.value || '08:00').split(':');
+                  return (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
+                      <div className="flex gap-2">
+                        <Select
+                          value={hour}
+                          onValueChange={(newHour) => {
+                            field.onChange(`${newHour}:${minute}`);
+                          }}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Hour" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[280px]">
+                            {HOUR_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={minute}
+                          onValueChange={(newMin) => {
+                            field.onChange(`${hour}:${newMin}`);
+                          }}
+                        >
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MINUTE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                :{opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
                 name="endTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Time</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City/Town</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select city/town" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {/* Kenya */}
-                        <SelectItem value="Nairobi">🇰🇪 Nairobi</SelectItem>
-                        <SelectItem value="Mombasa">🇰🇪 Mombasa</SelectItem>
-                        <SelectItem value="Kisumu">🇰🇪 Kisumu</SelectItem>
-                        <SelectItem value="Nakuru">🇰🇪 Nakuru</SelectItem>
-                        <SelectItem value="Eldoret">🇰🇪 Eldoret</SelectItem>
-                        <SelectItem value="Thika">🇰🇪 Thika</SelectItem>
-                        <SelectItem value="Malindi">🇰🇪 Malindi</SelectItem>
-                        <SelectItem value="Kitale">🇰🇪 Kitale</SelectItem>
-                        <SelectItem value="Garissa">🇰🇪 Garissa</SelectItem>
-                        <SelectItem value="Nyeri">🇰🇪 Nyeri</SelectItem>
-                        <SelectItem value="Machakos">🇰🇪 Machakos</SelectItem>
-                        <SelectItem value="Meru">🇰🇪 Meru</SelectItem>
-                        <SelectItem value="Lamu">🇰🇪 Lamu</SelectItem>
-                        <SelectItem value="Naivasha">🇰🇪 Naivasha</SelectItem>
-                        <SelectItem value="Kakamega">🇰🇪 Kakamega</SelectItem>
-                        <SelectItem value="Bungoma">🇰🇪 Bungoma</SelectItem>
-                        <SelectItem value="Kisii">🇰🇪 Kisii</SelectItem>
-                        <SelectItem value="Migori">🇰🇪 Migori</SelectItem>
-                        <SelectItem value="Embu">🇰🇪 Embu</SelectItem>
-                        <SelectItem value="Kericho">🇰🇪 Kericho</SelectItem>
-                        <SelectItem value="Nanyuki">🇰🇪 Nanyuki</SelectItem>
-                        {/* Uganda */}
-                        <SelectItem value="Kampala">🇺🇬 Kampala</SelectItem>
-                        <SelectItem value="Entebbe">🇺🇬 Entebbe</SelectItem>
-                        <SelectItem value="Jinja">🇺🇬 Jinja</SelectItem>
-                        <SelectItem value="Mbarara">🇺🇬 Mbarara</SelectItem>
-                        <SelectItem value="Gulu">🇺🇬 Gulu</SelectItem>
-                        <SelectItem value="Lira">🇺🇬 Lira</SelectItem>
-                        <SelectItem value="Mbale">🇺🇬 Mbale</SelectItem>
-                        <SelectItem value="Masaka">🇺🇬 Masaka</SelectItem>
-                        <SelectItem value="Soroti">🇺🇬 Soroti</SelectItem>
-                        <SelectItem value="Fort Portal">🇺🇬 Fort Portal</SelectItem>
-                        {/* Tanzania */}
-                        <SelectItem value="Dar es Salaam">🇹🇿 Dar es Salaam</SelectItem>
-                        <SelectItem value="Dodoma">🇹🇿 Dodoma</SelectItem>
-                        <SelectItem value="Arusha">🇹🇿 Arusha</SelectItem>
-                        <SelectItem value="Mwanza">🇹🇿 Mwanza</SelectItem>
-                        <SelectItem value="Zanzibar City">🇹🇿 Zanzibar City</SelectItem>
-                        <SelectItem value="Tanga">🇹🇿 Tanga</SelectItem>
-                        <SelectItem value="Moshi">🇹🇿 Moshi</SelectItem>
-                        <SelectItem value="Morogoro">🇹🇿 Morogoro</SelectItem>
-                        <SelectItem value="Mbeya">🇹🇿 Mbeya</SelectItem>
-                        <SelectItem value="Tabora">🇹🇿 Tabora</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const [hour, minute] = (field.value || '17:00').split(':');
+                  return (
+                    <FormItem>
+                      <FormLabel>End Time</FormLabel>
+                      <div className="flex gap-2">
+                        <Select
+                          value={hour}
+                          onValueChange={(newHour) => {
+                            field.onChange(`${newHour}:${minute}`);
+                          }}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Hour" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[280px]">
+                            {HOUR_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={minute}
+                          onValueChange={(newMin) => {
+                            field.onChange(`${hour}:${newMin}`);
+                          }}
+                        >
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MINUTE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                :{opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
+
+            {/* City/Town Field */}
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {facilityType === 'single-site' ? 'Location' : 'Select Location'}
+                  </FormLabel>
+                  {facilityType === 'single-site' && employerLocations.length > 0 ? (
+                    // Single-site: Show locked location (no dropdown)
+                    <>
+                      <FormControl>
+                        <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-muted/50">
+                          <span className="text-sm">
+                            📍 {employerLocations[0]?.name} - {employerLocations[0]?.town}
+                          </span>
+                        </div>
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Location is locked to your facility profile
+                      </p>
+                    </>
+                  ) : employerLocations.length > 0 ? (
+                    // Multi-site: Show dropdown with employer's locations only
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {employerLocations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.town}>
+                            📍 {loc.name} - {loc.town}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    // Fallback: No locations loaded yet
+                    <FormControl>
+                      <Input placeholder="Loading location..." disabled />
+                    </FormControl>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Description */}
             <FormField
@@ -708,52 +880,84 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
                 <CardTitle className="text-base font-semibold">Fee Calculation</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground space-y-2 pt-0">
-                {/* Normal Fee */}
+                {/* Daily Rate Info */}
                 <div className="flex justify-between items-center">
-                  <div>
-                    <span>Normal Notice Fee (15%)</span>
-                    <p className="text-xs text-muted-foreground">24+ hours advance notice</p>
-                  </div>
-                  <span className={`font-medium ${promoDiscount > 0 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                    {currency} {normalFee.toLocaleString()}
-                  </span>
+                  <span>Daily Rate (per shift)</span>
+                  <span className="font-medium text-foreground">{currency} {watchedRate.toLocaleString()}</span>
                 </div>
 
-                {promoDiscount > 0 && (
-                  <>
-                    <div className="flex justify-between text-green-600">
-                      <span>Promo Discount:</span>
-                      <span className="font-medium">- {currency} {promoDiscount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-accent font-bold">
-                      <span>Your Fee:</span>
-                      <span>{currency} {finalFee.toLocaleString()}</span>
-                    </div>
-                  </>
-                )}
-
-                {/* Urgent Fee */}
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="text-amber-600 dark:text-amber-500">Urgent Notice Fee (20%)</span>
-                    <p className="text-xs text-muted-foreground">Less than 24 hours notice</p>
-                  </div>
-                  <span className="font-medium text-amber-600 dark:text-amber-500">{currency} {urgentFee.toLocaleString()}</span>
-                </div>
-
-                {watchedRate > 0 && (
+                {/* Show date breakdown if dates are selected */}
+                {watchedDates.length > 0 && (
                   <>
                     <hr className="my-2" />
-                    <div className="flex justify-between text-green-600">
-                      <span>Professional Receives (~):</span>
-                      <span className="font-medium">{currency} {proReceives.toLocaleString()}</span>
+                    <div className="flex justify-between items-center">
+                      <span>Total Days Selected</span>
+                      <span className="font-medium text-foreground">{watchedDates.length} day{watchedDates.length > 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Subtotal (rates)</span>
+                      <span className="font-medium text-foreground">{currency} {feeCalc.totalDailyRate.toLocaleString()}</span>
+                    </div>
+                    <hr className="my-2" />
+
+                    {/* Fee breakdown by urgency */}
+                    {feeCalc.normalDays > 0 && (
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span>Normal Fee (15%)</span>
+                          <p className="text-xs text-muted-foreground">{feeCalc.normalDays} day{feeCalc.normalDays > 1 ? 's' : ''} with 24+ hours notice</p>
+                        </div>
+                        <span className="font-medium">{currency} {feeCalc.normalFeeTotal.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {feeCalc.urgentDays > 0 && (
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-amber-600 dark:text-amber-500">Urgent Fee (20%)</span>
+                          <p className="text-xs text-muted-foreground">{feeCalc.urgentDays} day{feeCalc.urgentDays > 1 ? 's' : ''} with &lt;24 hours notice</p>
+                        </div>
+                        <span className="font-medium text-amber-600 dark:text-amber-500">{currency} {feeCalc.urgentFeeTotal.toLocaleString()}</span>
+                      </div>
+                    )}
+
+                    {/* Promo discount */}
+                    {feeCalc.promoDiscount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Promo Discount:</span>
+                        <span className="font-medium">- {currency} {feeCalc.promoDiscount.toLocaleString()}</span>
+                      </div>
+                    )}
+
+                    {/* Total employer pays */}
+                    <hr className="my-2" />
+                    <div className="flex justify-between font-bold text-lg pt-2">
+                      <span className="text-foreground">Total You Pay:</span>
+                      <span className="text-green-500 dark:text-green-400 text-xl">{currency} {feeCalc.finalTotalCost.toLocaleString()}</span>
                     </div>
                   </>
                 )}
 
-                <p className="pt-2 text-xs bg-muted/50 p-2 rounded-md">
-                  💡 <strong>Tip:</strong> Post shifts with 24+ hours notice to pay only 15% fee instead of 20%.
-                </p>
+                {/* If no dates selected yet, show per-day fee estimates */}
+                {watchedDates.length === 0 && watchedRate > 0 && (
+                  <>
+                    <hr className="my-2" />
+                    <p className="text-xs text-muted-foreground italic">Select dates above to see total cost breakdown</p>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span>Normal Fee (15%)</span>
+                        <p className="text-xs text-muted-foreground">24+ hours advance notice</p>
+                      </div>
+                      <span className="font-medium">{currency} {feeCalc.normalFeePerDay.toLocaleString()} / day</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-amber-600 dark:text-amber-500">Urgent Fee (20%)</span>
+                        <p className="text-xs text-muted-foreground">Less than 24 hours notice</p>
+                      </div>
+                      <span className="font-medium text-amber-600 dark:text-amber-500">{currency} {feeCalc.urgentFeePerDay.toLocaleString()} / day</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -772,7 +976,7 @@ export function PostStintForm({ employerId = "demo-employer", employerName = "De
           </CardFooter>
         </form>
       </Form>
-    </Card>
+    </Card >
   );
 }
 

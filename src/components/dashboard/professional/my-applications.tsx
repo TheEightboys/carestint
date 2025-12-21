@@ -10,7 +10,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, MoreVertical, Loader2, RefreshCw, DollarSign, MapPin, FileText, Calendar, Building, X } from "lucide-react";
+import { Clock, CheckCircle, XCircle, MoreVertical, Loader2, RefreshCw, DollarSign, MapPin, FileText, Calendar, Building, X, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -281,6 +281,24 @@ export function MyApplications({ professionalId = "demo-professional" }: MyAppli
                                 </p>
                             </div>
 
+                            {/* Shift Times - Critical for scheduling */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-xs text-muted-foreground">Start Time</p>
+                                    <p className="font-medium flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-green-600" />
+                                        {viewingApp.stintDetails?.startTime || 'N/A'}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-xs text-muted-foreground">End Time</p>
+                                    <p className="font-medium flex items-center gap-2">
+                                        <Timer className="h-4 w-4 text-red-600" />
+                                        {viewingApp.stintDetails?.endTime || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <p className="text-xs text-muted-foreground">Offered Rate</p>
@@ -296,21 +314,33 @@ export function MyApplications({ professionalId = "demo-professional" }: MyAppli
                                 </div>
                             </div>
 
-                            {viewingApp.stintDetails?.description && (
-                                <div className="space-y-1">
-                                    <p className="text-xs text-muted-foreground">Description</p>
-                                    <p className="text-sm">{viewingApp.stintDetails.description}</p>
-                                </div>
-                            )}
+                            {/* Shift Notes / Requirements */}
+                            <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Shift Notes / Requirements</p>
+                                <p className="text-sm">
+                                    {viewingApp.stintDetails?.description || "No additional notes provided by the facility."}
+                                </p>
+                            </div>
 
                             <div className="pt-2 border-t">
                                 <div className="flex items-center gap-2">
                                     {getStatusIcon(viewingApp.status)}
-                                    <span className="text-sm">Application Status: </span>
+                                    <span className="text-sm">Status: </span>
                                     <Badge variant="outline" className={cn("text-xs", getStatusClass(viewingApp.status))}>
-                                        {viewingApp.status?.replace('_', ' ')}
+                                        {viewingApp.status === 'accepted'
+                                            ? 'Accepted by facility'
+                                            : viewingApp.status === 'rejected'
+                                                ? 'Application declined'
+                                                : viewingApp.status?.replace('_', ' ')}
                                     </Badge>
                                 </div>
+
+                                {/* Next Steps Guidance for accepted applications */}
+                                {viewingApp.status === 'accepted' && (
+                                    <p className="text-xs text-muted-foreground mt-3 p-2 bg-muted rounded-md">
+                                        📋 <strong>Next steps:</strong> This stint will appear in your Active tab on the day of the shift, where you can clock in and out.
+                                    </p>
+                                )}
                             </div>
                         </div>
 

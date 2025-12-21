@@ -784,6 +784,17 @@ export const updateStintStatus = async (id: string, status: StintStatus, additio
 export const acceptStint = async (stintId: string, professionalId: string, professionalName: string) => {
     const firestore = getDb();
     try {
+        // ROLE VALIDATION: Get stint and professional to validate role match
+        const stint = await getStintById(stintId) as any;
+        if (!stint) {
+            throw new Error('STINT_NOT_FOUND: The stint could not be found.');
+        }
+
+        const professional = await getProfessionalById(professionalId) as any;
+        if (stint.role && professional?.primaryRole && stint.role !== professional.primaryRole) {
+            throw new Error(`ROLE_MISMATCH: Cannot accept - professional role (${professional.primaryRole}) does not match stint role (${stint.role}).`);
+        }
+
         const docRef = doc(firestore, 'stints', stintId);
         await updateDoc(docRef, {
             status: 'accepted' as StintStatus,
@@ -805,7 +816,7 @@ export const acceptStint = async (stintId: string, professionalId: string, profe
         return true;
     } catch (error) {
         console.error("Error accepting stint:", error);
-        return false;
+        throw error;
     }
 }
 
@@ -877,6 +888,11 @@ export const addStintApplication = async (applicationData: {
             const hasConflict = await checkConflictOfInterest(applicationData.professionalId, stint.employerId);
             if (hasConflict) {
                 throw new Error('CONFLICT_OF_INTEREST: You cannot apply to stints posted by your own employer account. Please switch to employer mode to manage this stint.');
+            }
+
+            // ROLE VALIDATION: Ensure professional role matches stint role
+            if (stint.role && applicationData.professionalRole && stint.role !== applicationData.professionalRole) {
+                throw new Error(`ROLE_MISMATCH: Your verified role (${applicationData.professionalRole}) does not match this stint's required role (${stint.role}). You can only apply to stints matching your verified profession.`);
             }
         }
 

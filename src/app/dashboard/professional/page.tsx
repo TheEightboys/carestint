@@ -25,7 +25,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getProfessionalByEmail, getApplicationsByProfessional } from "@/lib/firebase/firestore";
+import { getProfessionalByEmail, getApplicationsByProfessional, getStintsByProfessional } from "@/lib/firebase/firestore";
 import { useUser } from "@/lib/user-context";
 import { auth } from "@/lib/firebase/clientApp";
 import { signOut } from "firebase/auth";
@@ -78,13 +78,22 @@ export default function ProfessionalDashboardPage() {
 
                 setProfessional(proData);
 
-                // Load application stats
-                const applications = await getApplicationsByProfessional(proData.id);
+                // Load application stats AND actual stint data for consistency
+                const [applications, stints] = await Promise.all([
+                    getApplicationsByProfessional(proData.id),
+                    getStintsByProfessional(proData.id)
+                ]);
+
+                // Count completed stints from actual stint data (status: completed OR closed)
+                const completedStintCount = stints.filter((s: any) =>
+                    s.status === 'completed' || s.status === 'closed'
+                ).length;
+
                 setStats({
                     applications: applications.length,
                     accepted: applications.filter((a: any) => a.status === 'accepted').length,
                     pending: applications.filter((a: any) => a.status === 'pending').length,
-                    completedStints: proData.completedStints || 0,
+                    completedStints: completedStintCount, // Use actual stint data, not profile field
                 });
             } catch (error) {
                 console.error('Error loading professional data:', error);

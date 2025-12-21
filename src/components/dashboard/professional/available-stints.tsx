@@ -172,7 +172,26 @@ export function AvailableStints({
     setIsLoading(true);
     try {
       const openStints = await getOpenStints();
-      setStints(openStints);
+
+      // CRITICAL: Role-based filtering - only show stints matching professional's verified role
+      // This is mandatory for a credentialed, role-restricted marketplace
+      const roleFilteredStints = openStints.filter((stint: any) => {
+        if (!professionalRole) return false; // If no role, show nothing
+
+        // Case-insensitive comparison with hyphen/space normalization
+        const stintRole = (stint.role || '').toLowerCase().replace(/[\s-]/g, '');
+        const profRole = professionalRole.toLowerCase().replace(/[\s-]/g, '');
+
+        return stintRole === profRole;
+      });
+
+      console.log('🔒 Role Filter:', {
+        professionalRole,
+        totalOpenStints: openStints.length,
+        filteredCount: roleFilteredStints.length
+      });
+
+      setStints(roleFilteredStints);
 
       if (professionalId && professionalId !== 'demo-professional') {
         const applications = await getApplicationsByProfessional(professionalId);
@@ -255,12 +274,12 @@ export function AvailableStints({
     setStintsWithDistance(stintsWithDist);
   }, [stints, userLocation]);
 
-  // Update active filter count
+  // Update active filter count (profession is NOT a filter - it's locked to verified role)
   useEffect(() => {
     let count = 0;
     if (filters.minRate > 0) count++;
     if (filters.shiftType !== 'all') count++;
-    if (filters.profession !== 'all') count++;
+    // Note: profession is not counted - it's mandatory role enforcement, not a preference
     if (filters.city !== 'All Cities') count++;
     if (filters.distance !== 'any') count++;
     setActiveFilterCount(count);
@@ -334,13 +353,11 @@ export function AvailableStints({
       return false;
     }
 
-    // Profession filter
-    if (filters.profession !== 'all' && stint.role !== filters.profession) {
-      return false;
-    }
+    // Note: Profession filtering is done at data load time (loadStints)
+    // All stints in this list already match the professional's verified role
 
-    // City filter
-    if (filters.city !== 'All Cities' && stint.city !== filters.city) {
+    // City filter (case-insensitive to handle variations like 'nairobi' vs 'Nairobi')
+    if (filters.city !== 'All Cities' && stint.city?.toLowerCase() !== filters.city.toLowerCase()) {
       return false;
     }
 
@@ -379,6 +396,19 @@ export function AvailableStints({
           <CardDescription>
             Search for available stints in your area that match your skills.
           </CardDescription>
+
+          {/* Role Enforcement Banner - shows locked profession */}
+          {professionalRole && (
+            <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-lg flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-accent" />
+              <span className="text-sm">
+                <strong>Role:</strong>{' '}
+                <span className="capitalize">{professionalRole.replace(/-/g, ' ')}</span>
+                {' '}
+                <span className="text-muted-foreground">(based on your verified profile)</span>
+              </span>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Location Status Banner */}
@@ -468,7 +498,7 @@ export function AvailableStints({
                   {/* Min Rate Filter */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
-                      Minimum Rate: KES {filters.minRate.toLocaleString()}
+                      Minimum Shift Pay (KES): {filters.minRate.toLocaleString()}
                     </Label>
                     <Slider
                       value={[filters.minRate]}
@@ -505,24 +535,15 @@ export function AvailableStints({
 
                   <Separator />
 
-                  {/* Profession Filter */}
+                  {/* Profession Info (not a filter - locked to verified role) */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">Profession</Label>
-                    <Select
-                      value={filters.profession}
-                      onValueChange={(value) => setFilters(prev => ({ ...prev, profession: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select profession" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PROFESSIONS.map(prof => (
-                          <SelectItem key={prof.value} value={prof.value}>
-                            {prof.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-medium">Your Profession</Label>
+                    <div className="p-3 bg-muted rounded-md">
+                      <p className="text-sm capitalize font-medium">{professionalRole?.replace(/-/g, ' ') || 'Not set'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Stints are filtered by your verified profession. Only matching roles are shown.
+                      </p>
+                    </div>
                   </div>
 
                   <Separator />
@@ -591,7 +612,7 @@ export function AvailableStints({
             <div className="flex flex-wrap gap-2">
               {filters.minRate > 0 && (
                 <Badge variant="secondary" className="gap-1">
-                  Min: KES {filters.minRate.toLocaleString()}
+                  Min Pay: KES {filters.minRate.toLocaleString()}
                   <X
                     className="h-3 w-3 cursor-pointer"
                     onClick={() => setFilters(prev => ({ ...prev, minRate: 0 }))}
@@ -604,15 +625,6 @@ export function AvailableStints({
                   <X
                     className="h-3 w-3 cursor-pointer"
                     onClick={() => setFilters(prev => ({ ...prev, shiftType: 'all' }))}
-                  />
-                </Badge>
-              )}
-              {filters.profession !== 'all' && (
-                <Badge variant="secondary" className="gap-1">
-                  {PROFESSIONS.find(p => p.value === filters.profession)?.label}
-                  <X
-                    className="h-3 w-3 cursor-pointer"
-                    onClick={() => setFilters(prev => ({ ...prev, profession: 'all' }))}
                   />
                 </Badge>
               )}
@@ -677,8 +689,8 @@ export function AvailableStints({
                       <Badge
                         variant="outline"
                         className={`text-xs ${stint.distance < 10 ? 'border-green-500 text-green-600' :
-                            stint.distance < 30 ? 'border-yellow-500 text-yellow-600' :
-                              'border-muted-foreground'
+                          stint.distance < 30 ? 'border-yellow-500 text-yellow-600' :
+                            'border-muted-foreground'
                           }`}
                       >
                         <Navigation className="h-3 w-3 mr-1" />
