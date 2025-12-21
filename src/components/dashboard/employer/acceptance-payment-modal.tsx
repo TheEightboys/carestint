@@ -365,10 +365,10 @@ export function AcceptancePaymentModal({
 
                         {/* Cost Breakdown */}
                         <div className="space-y-2">
-                            <p className="font-medium">Cost Breakdown</p>
+                            <p className="font-medium">Cost Breakdown <span className="font-normal text-muted-foreground text-sm">(for this date only)</span></p>
                             <div className="space-y-1 text-sm">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Shift Amount</span>
+                                    <span className="text-muted-foreground">Shift Amount (1 day)</span>
                                     <span>{stint.currency} {fees.shiftAmount.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between">

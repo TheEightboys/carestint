@@ -780,6 +780,7 @@ export function AvailableStints({
                     <Banknote className="h-4 w-4 text-green-600" />
                     <span className="text-lg font-semibold text-accent">
                       KES {stint.offeredRate?.toLocaleString() || 0}
+                      {stint.isMultiDay && <span className="text-sm font-normal text-muted-foreground">/day</span>}
                     </span>
                     <Badge variant="outline" className="capitalize">{stint.shiftType || 'shift'}</Badge>
                   </div>
@@ -819,7 +820,9 @@ export function AvailableStints({
                             <p className="text-sm text-muted-foreground">{stint.startTime} - {stint.endTime}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Rate</p>
+                            <p className="text-xs text-muted-foreground">
+                              Rate{stint.isMultiDay ? ' (per day)' : ''}
+                            </p>
                             <p className="font-medium text-green-600">KES {stint.offeredRate?.toLocaleString()}</p>
                             <p className="text-xs text-muted-foreground capitalize">{stint.shiftType?.replace('-', ' ')}</p>
                           </div>

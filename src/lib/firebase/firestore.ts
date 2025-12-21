@@ -649,6 +649,14 @@ export const addStint = async (stintData: {
 }) => {
     const firestore = getDb();
     try {
+        // CRITICAL LOG: Track rate at Firestore layer
+        console.log('🔥 FIRESTORE addStint DEBUG:', {
+            receivedOfferedRate: stintData.offeredRate,
+            urgency: stintData.urgency,
+            shiftDate: stintData.shiftDate,
+            isMultiDay: stintData.isMultiDay,
+        });
+
         // Calculate booking fee
         const bookingFeePercent = stintData.urgency === 'urgent' ? 20 : 15;
         const bookingFeeAmount = Math.round(stintData.offeredRate * (bookingFeePercent / 100));

@@ -246,7 +246,7 @@ export function TodaysStints({ employerId = "demo-employer" }: TodaysStintsProps
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <Banknote className="h-3 w-3" />
-                                                                <span>{stint.currency || 'KES'} {stint.offeredRate?.toLocaleString()}</span>
+                                                                <span>{stint.currency || 'KES'} {stint.offeredRate?.toLocaleString()}/day</span>
                                                             </div>
                                                         </div>
                                                         {/* Clock In/Out Times */}
