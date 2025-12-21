@@ -104,7 +104,7 @@ export function Header() {
         <div className="container flex h-16 items-center">
           <div className="mr-4 flex flex-1 items-center">
             <Link href="/" className="mr-6 flex items-center space-x-2 group">
-              <Logo className="h-6 w-auto transition-transform group-hover:scale-110" />
+              <Logo className="h-10 w-auto transition-transform group-hover:scale-110" />
             </Link>
             <span className="hidden whitespace-nowrap text-sm text-muted-foreground md:inline-block">
               Smart, automated healthcare staffing
@@ -194,7 +194,7 @@ export function Header() {
               <SheetContent side="right" className="w-[300px] sm:w-[350px]">
                 <SheetHeader>
                   <SheetTitle className="text-left font-headline">
-                    <Logo className="h-6 w-auto" />
+                    <Logo className="h-10 w-auto" />
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-4 mt-8">

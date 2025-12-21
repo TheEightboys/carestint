@@ -31,7 +31,7 @@ export function Footer() {
                     {/* Brand */}
                     <div className="space-y-4">
                         <Link href="/" className="inline-flex items-center space-x-2">
-                            <Logo className="h-6 w-auto" />
+                            <Logo className="h-10 w-auto" />
                         </Link>
                         <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
                             Smart, automated healthcare staffing for East & Central Africa. Connecting Employers/Facilities with verified professionals.
