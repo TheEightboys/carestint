@@ -438,13 +438,13 @@ export const getAllProfessionals = async () => {
     }
 }
 
-export const getProfessionalById = async (id: string) => {
+export const getProfessionalById = async (id: string): Promise<Professional | null> => {
     const firestore = getDb();
     try {
         const docRef = doc(firestore, 'professionals', id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() };
+            return { id: docSnap.id, ...docSnap.data() } as Professional;
         }
         return null;
     } catch (error) {
